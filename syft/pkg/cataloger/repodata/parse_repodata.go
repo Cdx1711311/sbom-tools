@@ -63,7 +63,7 @@ FROM
 		var homepage string
 		var checksumType string
 
-		if err = rows.Scan(&pkgId, &pkgKey, &name, &arch, &version, &packager, &epoch, &release, &description, &sourceRpm, &vendor, &license, &size, &homepage, &checksumType); err != nil {
+		if err = rows.Scan(&pkgId, &pkgKey, &name, &arch, &version, &epoch, &release, &description, &sourceRpm, &vendor, &packager, &license, &size, &homepage, &checksumType); err != nil {
 			log.Error(err)
 			continue
 		}
