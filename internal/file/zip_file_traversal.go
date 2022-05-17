@@ -106,7 +106,7 @@ func ExtractFromZipToUniqueTempFile(archivePath, dir string, paths ...string) (m
 			return fmt.Errorf("unable to extract directories, only files: %s", file.Name)
 		}
 
-		if err := safeCopy(tempFile, zippedFile); err != nil {
+		if err := SafeCopy(tempFile, zippedFile); err != nil {
 			return fmt.Errorf("unable to copy source=%q for zip=%q: %w", file.Name, archivePath, err)
 		}
 
@@ -138,7 +138,7 @@ func ContentsFromZip(archivePath string, paths ...string) (map[string]string, er
 		}
 
 		var buffer bytes.Buffer
-		if err := safeCopy(&buffer, zippedFile); err != nil {
+		if err := SafeCopy(&buffer, zippedFile); err != nil {
 			return fmt.Errorf("unable to copy source=%q for zip=%q: %w", file.Name, archivePath, err)
 		}
 
@@ -207,7 +207,7 @@ func extractSingleFile(file *zip.File, expandedFilePath, archivePath string) err
 			return fmt.Errorf("unable to create dest file=%q from zip=%q: %w", expandedFilePath, archivePath, err)
 		}
 
-		if err := safeCopy(outputFile, zippedFile); err != nil {
+		if err := SafeCopy(outputFile, zippedFile); err != nil {
 			return fmt.Errorf("unable to copy source=%q to dest=%q for zip=%q: %w", file.Name, outputFile.Name(), archivePath, err)
 		}
 

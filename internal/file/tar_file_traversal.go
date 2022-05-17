@@ -42,7 +42,7 @@ func ExtractGlobsFromTarToUniqueTempFile(archivePath, dir string, globs ...strin
 		// provides a ReadCloser. It is up to the caller to handle closing the file explicitly.
 		defer tempFile.Close()
 
-		if err := safeCopy(tempFile, file.ReadCloser); err != nil {
+		if err := SafeCopy(tempFile, file.ReadCloser); err != nil {
 			return fmt.Errorf("unable to copy source=%q for tar=%q: %w", file.Name(), archivePath, err)
 		}
 
