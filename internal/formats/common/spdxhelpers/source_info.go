@@ -11,6 +11,8 @@ func SourceInfo(p pkg.Package) string {
 	switch p.Type {
 	case pkg.RpmPkg:
 		answer = "acquired package info from RPM DB"
+	case pkg.RepodataPkg:
+		answer = "acquired package info from repodata DB"
 	case pkg.ApkPkg:
 		answer = "acquired package info from APK DB"
 	case pkg.DartPubPkg:
