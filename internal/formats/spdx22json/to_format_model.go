@@ -69,7 +69,29 @@ func toPackages(catalog *pkg.Catalog, relationships []artifact.Relationship) []m
 					})
 				}
 			}
+		} else if p.MetadataType == pkg.RpmRepodataType {
+			rpmRepodata := p.Metadata.(pkg.RpmRepodata)
+			if len(rpmRepodata.RpmDigests) > 0 {
+				for _, digest := range rpmRepodata.RpmDigests {
+					checksums = append(checksums, model.Checksum{
+						Algorithm:     strings.ToUpper(digest.Algorithm),
+						ChecksumValue: digest.Value,
+					})
+				}
+			}
 		}
+		// TODO: add to support rpmdb
+		// else if p.MetadataType == pkg.RpmdbMetadataType{
+		// 	rpmdbMetadata := p.Metadata.(pkg.RpmdbMetadata)
+		// 	if len(rpmdbMetadata.RpmDigests) > 0 {
+		// 		for _, digest := range rpmdbMetadata.RpmDigests {
+		// 			checksums = append(checksums, model.Checksum{
+		// 				Algorithm:     strings.ToUpper(digest.Algorithm),
+		// 				ChecksumValue: digest.Value,
+		// 			})
+		// 		}
+		// 	}
+		// }
 		// note: the license concluded and declared should be the same since we are collecting license information
 		// from the project data itself (the installed package files).
 		packages = append(packages, model.Package{
@@ -83,6 +105,7 @@ func toPackages(catalog *pkg.Catalog, relationships []artifact.Relationship) []m
 			// The Declared License is what the authors of a project believe govern the package
 			LicenseDeclared: license,
 			Originator:      spdxhelpers.Originator(p),
+			Supplier:        spdxhelpers.Supplier(p),
 			SourceInfo:      spdxhelpers.SourceInfo(p),
 			VersionInfo:     p.Version,
 			Item: model.Item{

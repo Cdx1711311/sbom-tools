@@ -22,6 +22,7 @@ const (
 	KbPkg            Type = "msrc-kb"
 	DartPubPkg       Type = "dart-pub"
 	DotnetPkg        Type = "dotnet"
+	RepodataPkg      Type = "rpm-repodata"
 )
 
 // AllPkgs represents all supported package types
@@ -40,6 +41,7 @@ var AllPkgs = []Type{
 	KbPkg,
 	DartPubPkg,
 	DotnetPkg,
+	RepodataPkg,
 }
 
 // PackageURLType returns the PURL package type for the current package.
@@ -59,7 +61,7 @@ func (t Type) PackageURLType() string {
 		return packageurl.TypeNPM
 	case JavaPkg, JenkinsPluginPkg:
 		return packageurl.TypeMaven
-	case RpmPkg:
+	case RpmPkg, RepodataPkg:
 		return packageurl.TypeRPM
 	case GoModulePkg:
 		return packageurl.TypeGolang

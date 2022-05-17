@@ -23,6 +23,7 @@ func parseRpmDB(resolver source.FilePathResolver, dbLocation source.Location, re
 	}
 
 	defer func() {
+		f.Close()
 		err = os.Remove(f.Name())
 		if err != nil {
 			log.Errorf("failed to remove temp rpmdb file: %+v", err)

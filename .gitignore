@@ -41,3 +41,6 @@ bin/
 # attestation
 cosign.key
 cosign.pub
+
+*.spdx.json
+*.spdx*.json
