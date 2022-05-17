@@ -9,7 +9,8 @@ import (
 	"github.com/anchore/syft/syft/event"
 	"github.com/anchore/syft/syft/linux"
 	"github.com/anchore/syft/syft/pkg"
-	"github.com/anchore/syft/syft/pkg/cataloger/common/cpe"
+
+	// "github.com/anchore/syft/syft/pkg/cataloger/common/cpe"
 	"github.com/anchore/syft/syft/source"
 	"github.com/hashicorp/go-multierror"
 	"github.com/wagoodman/go-partybus"
@@ -51,7 +52,7 @@ func Catalog(resolver source.FileResolver, release *linux.Release, catalogers ..
 	var errs error
 	for _, c := range catalogers {
 		// find packages from the underlying raw data
-		log.Debugf("cataloging with %q", c.Name())
+		log.Infof("cataloging with %q", c.Name())
 		packages, relationships, err := c.Catalog(resolver)
 		if err != nil {
 			errs = multierror.Append(errs, err)
@@ -65,7 +66,8 @@ func Catalog(resolver source.FileResolver, release *linux.Release, catalogers ..
 
 		for _, p := range packages {
 			// generate CPEs (note: this is excluded from package ID, so is safe to mutate)
-			p.CPEs = cpe.Generate(p)
+			// FIXME 暂时不需要，后续通过配置控制
+			// p.CPEs = cpe.Generate(p)
 
 			// generate PURL (note: this is excluded from package ID, so is safe to mutate)
 			p.PURL = pkg.URL(p, release)
