@@ -30,6 +30,8 @@ type RpmdbMetadata struct {
 	License   string            `json:"license"`
 	Vendor    string            `json:"vendor"`
 	Files     []RpmdbFileRecord `json:"files"`
+	// FIXME add support rpmdb
+	// RpmDigests []file.Digest     `hash:"ignore" json:"digest,omitempty"`
 }
 
 // RpmdbFileRecord represents the file metadata for a single file attributed to a RPM package.
