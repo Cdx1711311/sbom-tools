@@ -583,3 +583,7 @@ func indexingProgress(path string) (*progress.Stage, *progress.Manual) {
 
 	return stage, prog
 }
+
+func (r directoryResolver) Path() string {
+	return r.path
+}

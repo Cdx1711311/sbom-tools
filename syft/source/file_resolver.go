@@ -34,6 +34,7 @@ type FilePathResolver interface {
 	// RelativeFileByPath fetches a single file at the given path relative to the layer squash of the given reference.
 	// This is helpful when attempting to find a file that is in the same layer or lower as another file.
 	RelativeFileByPath(_ Location, path string) *Location
+	Path() string
 }
 
 type FileLocationResolver interface {
