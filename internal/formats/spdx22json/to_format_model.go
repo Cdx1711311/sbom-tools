@@ -48,6 +48,11 @@ func toFormatModel(s sbom.SBOM) *model.Document {
 
 func toPackages(catalog *pkg.Catalog, relationships []artifact.Relationship) []model.Package {
 	packages := make([]model.Package, 0)
+	externalCounter := spdxhelpers.ExternalCounter{
+		ProvideMap:     map[string]string{},
+		ExternalMap:    map[string]string{},
+		ExternalPkgMap: map[string][]string{},
+	}
 
 	for _, p := range catalog.Sorted() {
 		license := spdxhelpers.License(p)
@@ -94,11 +99,13 @@ func toPackages(catalog *pkg.Catalog, relationships []artifact.Relationship) []m
 		// }
 		// note: the license concluded and declared should be the same since we are collecting license information
 		// from the project data itself (the installed package files).
+		externalRefs := spdxhelpers.ExternalRefs(p, &externalCounter)
+
 		packages = append(packages, model.Package{
 			Checksums:        checksums,
 			Description:      spdxhelpers.Description(p),
 			DownloadLocation: spdxhelpers.DownloadLocation(p),
-			ExternalRefs:     spdxhelpers.ExternalRefs(p),
+			ExternalRefs:     externalRefs,
 			FilesAnalyzed:    filesAnalyzed,
 			HasFiles:         fileIDsForPackage(packageSpdxID, relationships),
 			Homepage:         spdxhelpers.Homepage(p),
@@ -119,6 +126,7 @@ func toPackages(catalog *pkg.Catalog, relationships []artifact.Relationship) []m
 		})
 	}
 
+	externalCounter.PrintCountInfo()
 	return packages
 }
 
