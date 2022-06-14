@@ -13,56 +13,39 @@ import (
 	"github.com/anchore/syft/internal/file"
 	"github.com/anchore/syft/internal/log"
 	"github.com/anchore/syft/syft/source"
+	"github.com/xi2/xz"
 
-	"github.com/diskfs/go-diskfs"
-	"github.com/diskfs/go-diskfs/filesystem"
+	"github.com/cavaliergopher/cpio"
+	"github.com/cavaliergopher/rpm"
 )
 
-// FIXME 此处路径分隔符，在windows场景下，无法适配ISO内部路径
-const ISO_PATH_SEPARATOR = "/"
-const ISO_REPODATA_FOLDER_NAME = "repodata"
-const SQLITE_FILE_NAME_SUFFIX = "-primary.sqlite.bz2"
-
-func resolverIsoRepodataFile(inputLocation source.Location) (string, io.Reader, error) {
-	isoPath := inputLocation.RealPath
-
-	// mount iso to filesystem
-	disk, err := diskfs.OpenWithMode(isoPath, diskfs.ReadOnly)
+func resolverRepodataFile(isoFS IsoFileSystem, xmlReader io.Reader) (RepodataFileList, error) {
+	repodataFileList, err := readRepoMdXML(xmlReader)
 	if err != nil {
-		log.Error(err)
-		return "", nil, err
+		return RepodataFileList{}, err
+	} else if err := repodataFileList.IsFindAllFilesPath(); err != nil { // 需要三个文件地址同时都获取到
+		return RepodataFileList{}, err
 	}
 
-	fs, err := disk.GetFilesystem(0)
+	primarySqliteBzFile, err := isoFS.OpenFile(repodataFileList.PrimarySqliteBzFilePath, os.O_RDONLY)
 	if err != nil {
-		log.Error(err)
-		return "", nil, err
+		return RepodataFileList{}, err
 	}
+	repodataFileList.PrimarySqliteBzFile = primarySqliteBzFile
 
-	return findRepodataForIso(fs)
-}
-
-func findRepodataForIso(fs filesystem.FileSystem) (string, io.Reader, error) {
-	repodataIsoPath := strings.Join([]string{"", ISO_REPODATA_FOLDER_NAME}, ISO_PATH_SEPARATOR)
-	files, err := fs.ReadDir(repodataIsoPath)
+	filelistsSqliteBzFile, err := isoFS.OpenFile(repodataFileList.FilelistsSqliteBzFilePath, os.O_RDONLY)
 	if err != nil {
-		return "", nil, err
+		return RepodataFileList{}, err
 	}
+	repodataFileList.FilelistsSqliteBzFile = filelistsSqliteBzFile
 
-	for _, file := range files {
-		if file.IsDir() || !strings.HasSuffix(file.Name(), SQLITE_FILE_NAME_SUFFIX) {
-			continue
-		}
-
-		sqliteBzFilePath := strings.Join([]string{repodataIsoPath, file.Name()}, ISO_PATH_SEPARATOR)
-		// TODO readonly模式打开，是否可以不close
-		sqliteBzFile, err := fs.OpenFile(sqliteBzFilePath, os.O_RDONLY)
-		if err != nil {
-			return "", nil, err
-		}
-		return sqliteBzFilePath, sqliteBzFile, nil
+	otherSqliteBzFile, err := isoFS.OpenFile(repodataFileList.OtherSqliteBzFilePath, os.O_RDONLY)
+	if err != nil {
+		return RepodataFileList{}, err
 	}
-	return "", nil, nil
+	repodataFileList.OtherSqliteBzFile = otherSqliteBzFile
+
+	return repodataFileList, err
 }
 
 func isLocationDir(location source.Location) bool {
@@ -85,7 +68,7 @@ func createRepodataTempDir() (string, func(), error) {
 	cleanupFn := func() {
 		err = os.RemoveAll(tempDir)
 		if err != nil {
-			log.Errorf("unable to cleanup repodata tempdir: %+v", err)
+			log.Errorf("unable to cleanup repodata temp dir: %+v", err)
 		}
 	}
 
@@ -101,7 +84,29 @@ func createRepodataTempDir() (string, func(), error) {
 	return repodataTempPath, cleanupFn, nil
 }
 
-func unBzip2(bzip2FilePath string, bzip2File io.Reader, unzipDir string) (string, error) {
+func unBzip2ForRepodata(repodataFileList RepodataFileList, unzipDir string) (RepodataFileList, error) {
+	primarySqliteUnBzFilePath, err := unBzip2SqliteFile(repodataFileList.PrimarySqliteBzFilePath, repodataFileList.PrimarySqliteBzFile, unzipDir)
+	if err != nil {
+		return repodataFileList, err
+	}
+	repodataFileList.PrimarySqliteUnBzFilePath = primarySqliteUnBzFilePath
+
+	filelistsSqliteUnBzFilePath, err := unBzip2SqliteFile(repodataFileList.FilelistsSqliteBzFilePath, repodataFileList.FilelistsSqliteBzFile, unzipDir)
+	if err != nil {
+		return repodataFileList, err
+	}
+	repodataFileList.FilelistsSqliteUnBzFilePath = filelistsSqliteUnBzFilePath
+
+	otherSqliteUnBzFilePath, err := unBzip2SqliteFile(repodataFileList.OtherSqliteBzFilePath, repodataFileList.OtherSqliteBzFile, unzipDir)
+	if err != nil {
+		return repodataFileList, err
+	}
+	repodataFileList.OtherSqliteUnBzFilePath = otherSqliteUnBzFilePath
+
+	return repodataFileList, nil
+}
+
+func unBzip2SqliteFile(bzip2FilePath string, bzip2File io.Reader, unzipDir string) (string, error) {
 	bzip2FileName := filepath.Base(bzip2FilePath)
 	unBzip2FileName := strings.TrimSuffix(bzip2FileName, ".bz2")
 	unBzip2FilePath := filepath.Join(unzipDir, unBzip2FileName)
@@ -138,4 +143,56 @@ func createDirIfNotExist(targetPath string) error {
 		}
 	}
 	return err
+}
+
+func ExtractRPM(rpmFile io.Reader, targetDir string) error {
+	pkg, err := rpm.Read(rpmFile)
+	if err != nil {
+		return err
+	}
+
+	xzReader, err := xz.NewReader(rpmFile, 0)
+	if err != nil {
+		return err
+	}
+
+	if format := pkg.PayloadFormat(); format != "cpio" {
+		return fmt.Errorf("unsupported payload format: %s", format)
+	}
+
+	cpioReader := cpio.NewReader(xzReader)
+	for {
+		hdr, err := cpioReader.Next()
+		if err == io.EOF {
+			break // no more files
+		}
+		if err != nil {
+			return err
+		}
+
+		// Skip directories and other irregular file types in this example
+		if !hdr.Mode.IsRegular() {
+			continue
+		}
+		if !strings.HasSuffix(hdr.Name, ".jar") {
+			continue
+		}
+
+		if dirName := filepath.Dir(hdr.Name); dirName != "" {
+			if err := os.MkdirAll(filepath.Join(targetDir, dirName), 0o755); err != nil {
+				return err
+			}
+		}
+
+		outFile, err := os.Create(filepath.Join(targetDir, hdr.Name))
+		if err != nil {
+			return err
+		}
+		if _, err := io.Copy(outFile, cpioReader); err != nil {
+			outFile.Close()
+			return err
+		}
+		outFile.Close()
+	}
+	return nil
 }

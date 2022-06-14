@@ -2,7 +2,6 @@ package repodata
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"strings"
 
@@ -14,8 +13,14 @@ import (
 )
 
 const catalogerName = "repodata-cataloger"
-const RepodataIsoSuffix = "iso"
-const RepodataFilePattern = "**/*primary.sqlite.bz2"
+
+// FIXME 此处路径分隔符，在windows场景下，无法适配ISO内部路径
+const ISO_PATH_SEPARATOR = "/"
+const ISO_REPODATA_FOLDER_NAME = "repodata"
+
+const REPODATA_ISO_SUFFIX = "iso"
+const SQLITE_FILE_NAME_SUFFIX = "-primary.sqlite.bz2"
+const REPODATA_MD_FILE_NAME = "repomd.xml"
 
 type Cataloger struct{}
 
@@ -28,65 +33,41 @@ func (c *Cataloger) Name() string {
 }
 
 func (c *Cataloger) Catalog(resolver source.FileResolver) ([]pkg.Package, []artifact.Relationship, error) {
-	rootFiles, err := resolver.FilesByPath("")
-
-	if len(rootFiles) == 1 && err == nil {
-		inputLocation := rootFiles[0]
-		if !isLocationDir(inputLocation) && strings.HasSuffix(inputLocation.RealPath, RepodataIsoSuffix) {
-			log.Infof("resolver repodata from input iso: %q", inputLocation.RealPath)
-			// only parse location once
-			sqliteBzFilePath, sqliteBzFile, err := resolverIsoRepodataFile(inputLocation)
-
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed to resolver repodata file: %w", err)
-			} else if sqliteBzFilePath == "" {
-				log.Warnf("unable resolver repodata from input iso: %q", inputLocation.RealPath)
-				return []pkg.Package{}, nil, nil
-			}
-
-			return parseRepodata(sqliteBzFilePath, sqliteBzFile)
-		}
-	}
-
-	fileMatches, err := resolver.FilesByGlob(RepodataFilePattern)
+	isoFileSystem, err := InitIsoFileSystem(resolver)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to find repodata's by db file: %w", err)
+		return nil, nil, err
 	}
 
-	for _, sqliteLocation := range fileMatches {
-		sqliteBzFilePath := sqliteLocation.RealPath
-		log.Infof("resolver repodata from input dir: %q", sqliteBzFilePath)
-
-		sqliteBzFile, err := os.Open(sqliteBzFilePath)
-		if err != nil {
-			return nil, nil, err
-		}
-		defer sqliteBzFile.Close()
-
-		// only parse one sqlite file
-		discoveredPkgs, discoveredShips, err := parseRepodata(sqliteBzFilePath, sqliteBzFile)
-		if err != nil {
-			return nil, nil, err
-		} else {
-			return discoveredPkgs, discoveredShips, nil
-		}
+	mdXmlFile, err := isoFileSystem.OpenFile(strings.Join([]string{ISO_REPODATA_FOLDER_NAME, REPODATA_MD_FILE_NAME}, ISO_PATH_SEPARATOR), os.O_RDONLY)
+	if err != nil {
+		log.Debugf("can`t find iso`s repomd.xml, %+v", err)
+		return []pkg.Package{}, nil, nil
 	}
-	return []pkg.Package{}, nil, nil
+	defer isoFileSystem.Close(mdXmlFile)
+
+	repodataFileList, err := resolverRepodataFile(isoFileSystem, mdXmlFile)
+	if err != nil {
+		log.Errorf("resolver repodata file failed, %+v", err)
+		return []pkg.Package{}, nil, nil
+	}
+	defer repodataFileList.Close(isoFileSystem)
+
+	return parseRepodata(isoFileSystem, repodataFileList)
 }
 
-func parseRepodata(sqliteBzFilePath string, sqliteBzFile io.Reader) ([]pkg.Package, []artifact.Relationship, error) {
+func parseRepodata(isoFileSystem IsoFileSystem, repodataFileList RepodataFileList) ([]pkg.Package, []artifact.Relationship, error) {
 	repodataTempDir, cleanupFn, err := createRepodataTempDir()
 	defer cleanupFn()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	unBzip2FilePath, err := unBzip2(sqliteBzFilePath, sqliteBzFile, repodataTempDir)
+	repodataFileList, err = unBzip2ForRepodata(repodataFileList, repodataTempDir)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	discoveredPkgs, err := parsePackagesInfo(unBzip2FilePath, sqliteBzFilePath)
+	discoveredPkgs, err := parsePackagesInfo(isoFileSystem, repodataFileList, repodataTempDir)
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to parse repodata for package: %w", err)
 	}
