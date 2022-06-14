@@ -145,3 +145,9 @@ func newLogWrapper(app *config.Application) {
 		Logger: logWrapper.Logger.WithField("from-lib", "stereoscope"),
 	})
 }
+
+func globalFormatConfig(app *config.Application) {
+	globalViper := viper.GetViper()
+	globalViper.Set("format.include-cpe", app.Format.IncludeCpe)
+	globalViper.Set("format.count-external", app.Format.CountExternal)
+}
