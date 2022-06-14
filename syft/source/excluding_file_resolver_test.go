@@ -184,6 +184,10 @@ func (r *mockResolver) RelativeFileByPath(_ Location, path string) *Location {
 	}
 }
 
+func (r *mockResolver) Path() string {
+	return ""
+}
+
 func (r *mockResolver) AllLocations() <-chan Location {
 	c := make(chan Location)
 	go func() {
