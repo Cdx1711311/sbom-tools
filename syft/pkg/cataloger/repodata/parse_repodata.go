@@ -1,23 +1,40 @@
 package repodata
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
 	"strconv"
+	"strings"
 
+	"github.com/anchore/packageurl-go"
 	"github.com/anchore/syft/internal/log"
 	"github.com/anchore/syft/syft/file"
 	"github.com/anchore/syft/syft/pkg"
 	"github.com/anchore/syft/syft/source"
+	"github.com/antchfx/jsonquery"
+	"github.com/codingsince1985/checksum"
+	"github.com/go-resty/resty/v2"
 	_ "modernc.org/sqlite"
 )
 
-func parsePackagesInfo(sqliteFilePath string, sqliteBzFilePath string) ([]pkg.Package, error) {
-	db, err := sql.Open("sqlite", sqliteFilePath)
+const mvnRegexpStr = `^mvn\(([A-Za-z0-9-_\.]*)\:([A-Za-z0-9-_\.]*)(\:([A-Za-z0-9-_\.]*))*\)`
+
+func parsePackagesInfo(isoFileSystem IsoFileSystem, repodataFileList RepodataFileList, unzipDir string) ([]pkg.Package, error) {
+	primaryDb, err := sql.Open("sqlite", repodataFileList.PrimarySqliteUnBzFilePath)
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
+	defer primaryDb.Close()
+
+	fileListDb, err := sql.Open("sqlite", repodataFileList.FilelistsSqliteUnBzFilePath)
+	if err != nil {
+		return nil, err
+	}
+	defer fileListDb.Close()
 
 	sql := `SELECT
 	pkgId,
@@ -34,11 +51,12 @@ func parsePackagesInfo(sqliteFilePath string, sqliteBzFilePath string) ([]pkg.Pa
 	rpm_license license,
 	size_installed size,
 	ifnull( url, "") homepage,
-	checksum_type checksumType
+	checksum_type checksumType,
+	location_href locationHref
 FROM
 	packages`
 
-	rows, err := db.Query(sql)
+	rows, err := primaryDb.Query(sql)
 	if err != nil {
 		return nil, err
 	}
@@ -62,8 +80,9 @@ FROM
 		var size int
 		var homepage string
 		var checksumType string
+		var locationHref string
 
-		if err = rows.Scan(&pkgId, &pkgKey, &name, &arch, &version, &epoch, &release, &description, &sourceRpm, &vendor, &packager, &license, &size, &homepage, &checksumType); err != nil {
+		if err = rows.Scan(&pkgId, &pkgKey, &name, &arch, &version, &epoch, &release, &description, &sourceRpm, &vendor, &packager, &license, &size, &homepage, &checksumType, &locationHref); err != nil {
 			log.Error(err)
 			continue
 		}
@@ -71,6 +90,22 @@ FROM
 		if err != nil {
 			log.Error(err)
 			epoch_int10 = 0
+		}
+
+		rpmProvides, closeFn, err := queryMvnProvidesForPackage(*primaryDb, pkgKey, version)
+		defer closeFn()
+		if err != nil {
+			log.Error(err)
+		}
+
+		javaFileList, err := queryJavaFileListForPackage(*fileListDb, pkgKey)
+		if err != nil {
+			log.Error(err)
+		}
+
+		javaPackages, err := covertJavaFileToPackage(javaFileList, isoFileSystem, unzipDir, locationHref)
+		if err != nil {
+			log.Error(err)
 		}
 
 		metadata := pkg.RpmRepodata{
@@ -90,14 +125,15 @@ FROM
 				Algorithm: checksumType,
 				Value:     pkgId,
 			}},
-			// TODO
+			RpmProvides: rpmProvides,
+			ExtPackage:  javaPackages,
 			// Files:       extractRpmdbFileRecords(resolver, entry),
 		}
 
 		p := pkg.Package{
 			Name:         name,
 			Version:      toELVersion(metadata),
-			Locations:    source.NewLocationSet(source.NewLocation(sqliteBzFilePath)),
+			Locations:    source.NewLocationSet(source.NewLocation(repodataFileList.PrimarySqliteBzFilePath)),
 			Licenses:     []string{license},
 			FoundBy:      catalogerName,
 			Type:         pkg.RepodataPkg,
@@ -122,4 +158,208 @@ func toELVersion(metadata pkg.RpmRepodata) string {
 		return fmt.Sprintf("%d:%s-%s", *metadata.Epoch, metadata.Version, metadata.Release)
 	}
 	return fmt.Sprintf("%s-%s", metadata.Version, metadata.Release)
+}
+
+func queryMvnProvidesForPackage(primaryDb sql.DB, pkgKey int, pkgVersion string) ([]pkg.RepodataPackageRecord, func(), error) {
+	rpmProvides := make([]pkg.RepodataPackageRecord, 0)
+	sql := `SELECT
+		name,
+		ifnull( version, "") version
+	FROM
+		provides
+	WHERE
+		pkgKey = ?
+		AND name LIKE 'mvn(%'
+		AND name NOT LIKE '%:pom:%'
+		AND name NOT LIKE '%:xml:%'
+		AND name NOT LIKE '%:sources:%'
+		AND name NOT LIKE '%:sources-feature:%'`
+
+	rows, err := primaryDb.Query(sql, pkgKey)
+	defer primaryDb.Close()
+
+	if err != nil {
+		return []pkg.RepodataPackageRecord{}, func() {}, err
+	}
+	closeFn := func() {
+		err := rows.Close()
+		if err != nil {
+			log.Errorf("unable to close primaryDb query rows, pkgKey: %s, %+v", pkgKey, err)
+		}
+	}
+
+	mvnRegexp := regexp.MustCompile(mvnRegexpStr)
+
+	for rows.Next() {
+		var name string
+		var version string
+		if err = rows.Scan(&name, &version); err != nil {
+			log.Error(err)
+			continue
+		}
+
+		if version == "" {
+			version = pkgVersion
+		}
+
+		mvnCoordinate := mvnRegexp.FindStringSubmatch(name)
+		groupId := mvnCoordinate[1]
+		artifactId := mvnCoordinate[2]
+		if len(mvnCoordinate) > 4 && mvnCoordinate[4] != "" {
+			version = mvnCoordinate[4]
+		}
+		rpmProvide := pkg.RepodataPackageRecord{
+			PkgType:    packageurl.TypeMaven,
+			GroupId:    groupId,
+			ArtifactId: artifactId,
+			Version:    version,
+		}
+
+		rpmProvides = append(rpmProvides, rpmProvide)
+	}
+
+	if err = rows.Err(); err != nil {
+		return []pkg.RepodataPackageRecord{}, closeFn, err
+	}
+
+	return rpmProvides, closeFn, nil
+}
+
+func queryJavaFileListForPackage(fileListDb sql.DB, pkgKey int) (map[string]string, error) {
+	javaFileList := make(map[string]string, 0)
+
+	sql := `SELECT
+	dirname, filenames  
+FROM
+	filelist 
+WHERE
+	pkgKey = ? 
+	AND filenames LIKE '%.jar%' 
+	AND dirname NOT LIKE '/usr/share/java%'`
+	rows, err := fileListDb.Query(sql, pkgKey)
+	defer fileListDb.Close()
+
+	if err != nil {
+		return javaFileList, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var dirname string
+		var filenames string
+		if err = rows.Scan(&dirname, &filenames); err != nil {
+			log.Error(err)
+			continue
+		}
+
+		filenameArr := strings.Split(filenames, "/")
+		for _, filename := range filenameArr {
+			if !strings.HasSuffix(filename, ".jar") {
+				continue
+			}
+			javaFileList[filename] = strings.Join([]string{dirname, filename}, ISO_PATH_SEPARATOR)
+		}
+	}
+
+	if err = rows.Err(); err != nil {
+		return map[string]string{}, err
+	}
+	return javaFileList, nil
+}
+
+func covertJavaFileToPackage(javaFileList map[string]string, isoFileSystem IsoFileSystem, unzipDir string, locationHref string) ([]pkg.RepodataPackageRecord, error) {
+	javaPackages := make([]pkg.RepodataPackageRecord, 0)
+	if len(javaFileList) == 0 {
+		return javaPackages, nil
+	}
+
+	rpmUnzipDirPath, cleanupRpmTempDirFn, err := extractRpmToTempDir(isoFileSystem, unzipDir, locationHref)
+	defer cleanupRpmTempDirFn()
+	if err != nil {
+		return javaPackages, err
+	}
+
+	for _, jarPath := range javaFileList {
+		jarAbsolutePath := filepath.Join(rpmUnzipDirPath, jarPath)
+		if !fileExists(jarAbsolutePath) {
+			log.Debugf("file: is not exists, not calculate checksum", jarAbsolutePath)
+			continue
+		}
+		sha1, err := checksum.SHA1sum(jarAbsolutePath)
+		if err != nil {
+			log.Error(err)
+			continue
+		}
+
+		restResult, err := resty.New().R().SetQueryParams(map[string]string{
+			"q":    "1:" + sha1,
+			"rows": "1",
+			"wt":   "json",
+		}).SetHeader("Accept", "application/json").
+			Get("https://search.maven.org/solrsearch/select")
+		if err != nil {
+			log.Error(err)
+			continue
+		}
+		mvnResult, err := jsonquery.Parse(bytes.NewReader(restResult.Body()))
+		if err != nil {
+			log.Error(err)
+			continue
+		}
+		if numFound := jsonquery.FindOne(mvnResult, "response/numFound"); numFound == nil || numFound.InnerText() == "0" {
+			log.Warnf("%s `s jar:%s, can not find artifact in maven central. sha1: %s", locationHref, jarPath, sha1)
+			continue
+		}
+
+		groupId := jsonquery.FindOne(mvnResult, "response/docs/*/g").InnerText()
+		artifactId := jsonquery.FindOne(mvnResult, "response/docs/*/a").InnerText()
+		version := jsonquery.FindOne(mvnResult, "response/docs/*/v").InnerText()
+		jarPackage := pkg.RepodataPackageRecord{
+			PkgType:    packageurl.TypeMaven,
+			GroupId:    groupId,
+			ArtifactId: artifactId,
+			Version:    version,
+		}
+		javaPackages = append(javaPackages, jarPackage)
+	}
+	return javaPackages, nil
+}
+
+func extractRpmToTempDir(isoFileSystem IsoFileSystem, unzipDir string, rpmPath string) (string, func(), error) {
+	rpmFileName := filepath.Base(rpmPath)
+	rpmName := strings.TrimSuffix(rpmFileName, ".rpm")
+	rpmUnzipDirPath := filepath.Join(unzipDir, rpmName)
+	// 需要在外部加载完jar包后再移除目录
+	cleanupFn := func() {
+		err := os.RemoveAll(rpmUnzipDirPath)
+		if err != nil {
+			log.Errorf("unable to cleanup repodata temp dir: %+v", err)
+		}
+	}
+
+	if createErr := createDirIfNotExist(rpmUnzipDirPath); createErr != nil {
+		log.Errorf("failed to create repodata dir: %+v", createErr)
+		return "", cleanupFn, createErr
+	}
+
+	rpmFile, err := isoFileSystem.OpenFile(rpmPath, os.O_RDONLY)
+	if err != nil {
+		return "", cleanupFn, err
+	}
+	defer isoFileSystem.Close(rpmFile)
+
+	err = ExtractRPM(rpmFile, rpmUnzipDirPath)
+	if err != nil {
+		return "", cleanupFn, err
+	}
+
+	return rpmUnzipDirPath, cleanupFn, nil
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	if err != nil {
+		return os.IsExist(err)
+	}
+	return true
 }
