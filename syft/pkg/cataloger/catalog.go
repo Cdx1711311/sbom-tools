@@ -9,8 +9,9 @@ import (
 	"github.com/anchore/syft/syft/event"
 	"github.com/anchore/syft/syft/linux"
 	"github.com/anchore/syft/syft/pkg"
+	"github.com/anchore/syft/syft/pkg/cataloger/common/cpe"
+	"github.com/spf13/viper"
 
-	// "github.com/anchore/syft/syft/pkg/cataloger/common/cpe"
 	"github.com/anchore/syft/syft/source"
 	"github.com/hashicorp/go-multierror"
 	"github.com/wagoodman/go-partybus"
@@ -65,12 +66,17 @@ func Catalog(resolver source.FileResolver, release *linux.Release, catalogers ..
 		packagesDiscovered.N += int64(catalogedPackages)
 
 		for _, p := range packages {
-			// generate CPEs (note: this is excluded from package ID, so is safe to mutate)
-			// FIXME 暂时不需要，后续通过配置控制
-			// p.CPEs = cpe.Generate(p)
+			v := viper.GetViper()
+			if v.GetBool("format.include-cpe") {
+				// generate CPEs (note: this is excluded from package ID, so is safe to mutate)
+				p.CPEs = cpe.Generate(p)
+			}
 
 			// generate PURL (note: this is excluded from package ID, so is safe to mutate)
 			p.PURL = pkg.URL(p, release)
+			providesPurls, extPkgPurls := pkg.URLs(p, release)
+			p.ProvidesPurls = providesPurls
+			p.ExtPkgPurls = extPkgPurls
 
 			// if we were not able to identify the language we have an opportunity
 			// to try and get this value from the PURL. Worst case we assert that

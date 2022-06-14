@@ -95,3 +95,16 @@ func purlQualifiers(vars map[string]string, release *linux.Release) (q packageur
 
 	return q
 }
+
+type urlsIdentifier interface {
+	PackageURLs(*linux.Release) ([]string, []string)
+}
+
+func URLs(p Package, release *linux.Release) ([]string, []string) {
+	if p.Metadata != nil {
+		if i, ok := p.Metadata.(urlsIdentifier); ok {
+			return i.PackageURLs(release)
+		}
+	}
+	return []string{}, []string{}
+}
