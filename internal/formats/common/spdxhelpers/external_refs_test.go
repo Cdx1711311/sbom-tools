@@ -38,7 +38,12 @@ func Test_ExternalRefs(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			assert.ElementsMatch(t, test.expected, ExternalRefs(test.input))
+			externalCounter := ExternalCounter{
+				ProvideMap:     map[string]string{},
+				ExternalMap:    map[string]string{},
+				ExternalPkgMap: map[string][]string{},
+			}
+			assert.ElementsMatch(t, test.expected, ExternalRefs(test.input, &externalCounter))
 		})
 	}
 }

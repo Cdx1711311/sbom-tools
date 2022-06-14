@@ -91,6 +91,11 @@ func toFormatModel(s sbom.SBOM) *spdx.Document2_2 {
 // nolint: funlen
 func toFormatPackages(catalog *pkg.Catalog) map[spdx.ElementID]*spdx.Package2_2 {
 	results := make(map[spdx.ElementID]*spdx.Package2_2)
+	externalCounter := spdxhelpers.ExternalCounter{
+		ProvideMap:     map[string]string{},
+		ExternalMap:    map[string]string{},
+		ExternalPkgMap: map[string][]string{},
+	}
 
 	for _, p := range catalog.Sorted() {
 		// name should be guaranteed to be unique, but semantically useful and stable
@@ -262,7 +267,7 @@ func toFormatPackages(catalog *pkg.Catalog) map[spdx.ElementID]*spdx.Package2_2 
 
 			// 3.21: Package External Reference
 			// Cardinality: optional, one or many
-			PackageExternalReferences: formatSPDXExternalRefs(p),
+			PackageExternalReferences: formatSPDXExternalRefs(p, &externalCounter),
 
 			// 3.22: Package External Reference Comment
 			// Cardinality: conditional (optional, one) for each External Reference
@@ -276,11 +281,12 @@ func toFormatPackages(catalog *pkg.Catalog) map[spdx.ElementID]*spdx.Package2_2 
 			Files: nil,
 		}
 	}
+	externalCounter.PrintCountInfo()
 	return results
 }
 
-func formatSPDXExternalRefs(p pkg.Package) (refs []*spdx.PackageExternalReference2_2) {
-	for _, ref := range spdxhelpers.ExternalRefs(p) {
+func formatSPDXExternalRefs(p pkg.Package, externalCounter *spdxhelpers.ExternalCounter) (refs []*spdx.PackageExternalReference2_2) {
+	for _, ref := range spdxhelpers.ExternalRefs(p, externalCounter) {
 		refs = append(refs, &spdx.PackageExternalReference2_2{
 			Category:           string(ref.ReferenceCategory),
 			RefType:            string(ref.ReferenceType),

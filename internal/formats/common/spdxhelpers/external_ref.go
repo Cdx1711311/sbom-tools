@@ -3,9 +3,11 @@ package spdxhelpers
 type ReferenceCategory string
 
 const (
-	SecurityReferenceCategory       ReferenceCategory = "SECURITY"
-	PackageManagerReferenceCategory ReferenceCategory = "PACKAGE_MANAGER"
-	OtherReferenceCategory          ReferenceCategory = "OTHER"
+	SecurityReferenceCategory        ReferenceCategory = "SECURITY"
+	PackageManagerReferenceCategory  ReferenceCategory = "PACKAGE_MANAGER"
+	ProvideManagerReferenceCategory  ReferenceCategory = "PROVIDE_MANAGER"
+	ExternalManagerReferenceCategory ReferenceCategory = "EXTERNAL_MANAGER"
+	OtherReferenceCategory           ReferenceCategory = "OTHER"
 )
 
 // source: https://spdx.github.io/spdx-spec/appendix-VI-external-repository-identifiers/

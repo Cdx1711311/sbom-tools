@@ -88,6 +88,7 @@ require (
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/ReneKroon/ttlcache/v2 v2.11.0 // indirect
 	github.com/ThalesIgnite/crypto11 v1.2.5 // indirect
+	github.com/antchfx/xpath v1.2.1 // indirect
 	github.com/armon/go-metrics v0.3.10 // indirect
 	github.com/armon/go-radix v1.0.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d // indirect
@@ -341,7 +342,12 @@ require (
 	// we are hinting brotli to latest due to warning when installing archiver v3:
 	// go: warning: github.com/andybalholm/brotli@v1.0.1: retracted by module author: occasional panics and data corruption
 	github.com/andybalholm/brotli v1.0.4 // indirect
+	github.com/antchfx/jsonquery v1.2.0
+	github.com/cavaliergopher/cpio v1.0.1
+	github.com/cavaliergopher/rpm v1.2.0
+	github.com/codingsince1985/checksum v1.2.4
 	github.com/diskfs/go-diskfs v1.2.0
+	github.com/go-resty/resty/v2 v2.7.0
 	github.com/kdomanski/iso9660 v0.2.1
 	github.com/pkg/errors v0.9.1
 	golang.org/x/crypto v0.0.0-20220427172511-eb4f295cb31f // indirect

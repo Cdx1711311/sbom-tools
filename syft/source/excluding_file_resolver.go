@@ -99,3 +99,7 @@ func filterLocations(locations []Location, err error, exclusionFn excludeFn) ([]
 	}
 	return locations, nil
 }
+
+func (r excludingResolver) Path() string {
+	return ""
+}

@@ -55,6 +55,10 @@ func (r *rpmdbTestFileResolverMock) FilesByMIMEType(...string) ([]source.Locatio
 	return nil, fmt.Errorf("not implemented")
 }
 
+func (r *rpmdbTestFileResolverMock) Path() string {
+	return ""
+}
+
 func TestParseRpmDB(t *testing.T) {
 	dbLocation := source.NewLocation("test-path")
 

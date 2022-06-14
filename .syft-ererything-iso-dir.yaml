@@ -4,7 +4,7 @@
 # output:
 #   - "json=<syft-json-output-file>"
 #   - "spdx-json=<spdx-json-output-file>"
-output: "table"
+output: "spdx-json=everything-dir-repodata-sbom.spdx.json"
 
 # suppress all output (except for the SBOM report)
 # same as -q ; SYFT_QUIET env var
@@ -202,3 +202,7 @@ anchore:
   # (feature-preview) path to dockerfile to be uploaded with the syft results to Anchore Enterprise (supported on Enterprise 3.0+)
   # same as -d ; SYFT_ANCHORE_DOCKERFILE env var
   dockerfile: ""
+
+format:
+  include-cpe: false
+  count-external: true

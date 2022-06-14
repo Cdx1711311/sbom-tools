@@ -4,7 +4,7 @@
 # output:
 #   - "json=<syft-json-output-file>"
 #   - "spdx-json=<spdx-json-output-file>"
-output: "table"
+output: "spdx-json=dvd-dir-repodata-sbom.spdx.json"
 
 # suppress all output (except for the SBOM report)
 # same as -q ; SYFT_QUIET env var
@@ -55,6 +55,9 @@ file-classification:
   cataloger:
     # enable/disable cataloging of file classifications
     # SYFT_FILE_CLASSIFICATION_CATALOGER_ENABLED env var
+    #test
+    # enabled: true
+
     enabled: false
 
     # the search space to look for file classifications (options: all-layers, squashed)
@@ -85,6 +88,9 @@ file-metadata:
   cataloger:
     # enable/disable cataloging of file metadata
     # SYFT_FILE_METADATA_CATALOGER_ENABLED env var
+    #test
+    # enabled: true
+
     enabled: false
 
     # the search space to look for file metadata (options: all-layers, squashed)
@@ -100,7 +106,9 @@ secrets:
   cataloger:
     # enable/disable cataloging of secrets
     # SYFT_SECRETS_CATALOGER_ENABLED env var
+    #test
     # enabled: true
+
     enabled: false
 
     # the search space to look for secrets (options: all-layers, squashed)
@@ -194,3 +202,7 @@ anchore:
   # (feature-preview) path to dockerfile to be uploaded with the syft results to Anchore Enterprise (supported on Enterprise 3.0+)
   # same as -d ; SYFT_ANCHORE_DOCKERFILE env var
   dockerfile: ""
+
+format:
+  include-cpe: true
+  count-external: false
