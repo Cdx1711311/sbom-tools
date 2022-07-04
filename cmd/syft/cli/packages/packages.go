@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"time"
 
 	"github.com/anchore/stereoscope"
 	"github.com/anchore/syft/cmd/syft/cli/eventloop"
@@ -71,11 +72,14 @@ func execWorker(app *config.Application, si source.Input, writer sbom.Writer) <-
 			return
 		}
 
+		startTime := time.Now()
 		s, err := GenerateSBOM(src, errs, app)
 		if err != nil {
 			errs <- err
 			return
 		}
+		timeCost := time.Since(startTime)
+		log.Infof("generate sbom cost time: %v", timeCost)
 
 		if s == nil {
 			errs <- fmt.Errorf("no SBOM produced for %q", si.UserInput)
