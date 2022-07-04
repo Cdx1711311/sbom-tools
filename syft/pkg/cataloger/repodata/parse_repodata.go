@@ -161,7 +161,6 @@ func toELVersion(metadata pkg.RpmRepodata) string {
 }
 
 func queryMvnProvidesForPackage(primaryDb sql.DB, pkgKey int, pkgVersion string) ([]pkg.RepodataPackageRecord, func(), error) {
-	rpmProvides := make([]pkg.RepodataPackageRecord, 0)
 	sql := `SELECT
 		name,
 		ifnull( version, "") version
@@ -189,6 +188,7 @@ func queryMvnProvidesForPackage(primaryDb sql.DB, pkgKey int, pkgVersion string)
 	}
 
 	mvnRegexp := regexp.MustCompile(mvnRegexpStr)
+	rpmProvideMap := make(map[string]pkg.RepodataPackageRecord, 0)
 
 	for rows.Next() {
 		var name string
@@ -215,13 +215,14 @@ func queryMvnProvidesForPackage(primaryDb sql.DB, pkgKey int, pkgVersion string)
 			Version:    version,
 		}
 
-		rpmProvides = append(rpmProvides, rpmProvide)
+		rpmProvideMap[strings.Join([]string{rpmProvide.PkgType, rpmProvide.GroupId, rpmProvide.ArtifactId, rpmProvide.Version}, ":")] = rpmProvide
 	}
 
 	if err = rows.Err(); err != nil {
 		return []pkg.RepodataPackageRecord{}, closeFn, err
 	}
 
+	rpmProvides := mapToSlice(rpmProvideMap)
 	return rpmProvides, closeFn, nil
 }
 
@@ -279,10 +280,11 @@ func covertJavaFileToPackage(javaFileList map[string]string, isoFileSystem IsoFi
 		return javaPackages, err
 	}
 
+	javaPackagesMap := make(map[string]pkg.RepodataPackageRecord, 0)
 	for _, jarPath := range javaFileList {
 		jarAbsolutePath := filepath.Join(rpmUnzipDirPath, jarPath)
 		if !fileExists(jarAbsolutePath) {
-			log.Debugf("file: is not exists, not calculate checksum", jarAbsolutePath)
+			log.Debugf("file:%s is not exists, not calculate checksum", jarAbsolutePath)
 			continue
 		}
 		sha1, err := checksum.SHA1sum(jarAbsolutePath)
@@ -320,8 +322,9 @@ func covertJavaFileToPackage(javaFileList map[string]string, isoFileSystem IsoFi
 			ArtifactId: artifactId,
 			Version:    version,
 		}
-		javaPackages = append(javaPackages, jarPackage)
+		javaPackagesMap[strings.Join([]string{jarPackage.PkgType, jarPackage.GroupId, jarPackage.ArtifactId, jarPackage.Version}, ":")] = jarPackage
 	}
+	javaPackages = mapToSlice(javaPackagesMap)
 	return javaPackages, nil
 }
 
@@ -362,4 +365,12 @@ func fileExists(path string) bool {
 		return os.IsExist(err)
 	}
 	return true
+}
+
+func mapToSlice(input map[string]pkg.RepodataPackageRecord) []pkg.RepodataPackageRecord {
+	output := make([]pkg.RepodataPackageRecord, 0)
+	for _, v := range input {
+		output = append(output, v)
+	}
+	return output
 }
