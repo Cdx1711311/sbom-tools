@@ -4,7 +4,7 @@
 # output:
 #   - "json=<syft-json-output-file>"
 #   - "spdx-json=<spdx-json-output-file>"
-output: "spdx-json=everything-iso-repodata-sbom.spdx.json"
+# output: "spdx-json=everything-iso-repodata-sbom.spdx.json"
 
 # suppress all output (except for the SBOM report)
 # same as -q ; SYFT_QUIET env var
