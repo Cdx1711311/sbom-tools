@@ -1,4 +1,0 @@
-rootProject.name = 'Gradle-Android-Example'
-
-include ':app'
-include ':lib'
