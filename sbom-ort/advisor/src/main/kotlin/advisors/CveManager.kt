@@ -18,7 +18,7 @@ import org.ossreviewtoolkit.model.config.AdvisorConfiguration
 import org.ossreviewtoolkit.model.utils.toPurl
 import org.ossreviewtoolkit.utils.common.enumSetOf
 import org.ossreviewtoolkit.utils.ort.OkHttpClientHelper
-import org.ossreviewtoolkit.utils.ort.log
+import org.ossreviewtoolkit.utils.ort.logger
 
 import retrofit2.HttpException
 
@@ -100,7 +100,7 @@ class CveManager(name: String, serverUrl: String = CveManagerService.DEFAULT_BAS
         )
 
         val references = mutableListOf(reference)
-        return Vulnerability(cveNum, references)
+        return Vulnerability(cveNum, null, null, references)
     }
 
     /**
@@ -112,7 +112,7 @@ class CveManager(name: String, serverUrl: String = CveManagerService.DEFAULT_BAS
         coordinates: List<String>
     ): CveManagerService.ComponentReport =
         try {
-            log.debug { "Querying component report from ${CveManagerService.DEFAULT_BASE_URL}." }
+            logger.debug { "Querying component report from ${CveManagerService.DEFAULT_BASE_URL}." }
             service.getComponentReport(CveManagerService.ComponentReportRequest(coordinates))
         } catch (e: HttpException) {
             throw IOException(e)
