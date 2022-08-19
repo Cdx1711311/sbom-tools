@@ -36,9 +36,9 @@ val copyWebAppTemplate by tasks.registering(Copy::class) {
     outputs.cacheIf { true }
 }
 
-sourceSets.named("main") {
-    output.dir(mapOf("builtBy" to copyWebAppTemplate), generatedResourcesDir)
-}
+//sourceSets.named("main") {
+//    output.dir(mapOf("builtBy" to copyWebAppTemplate), generatedResourcesDir)
+//}
 
 repositories {
     exclusiveContent {
