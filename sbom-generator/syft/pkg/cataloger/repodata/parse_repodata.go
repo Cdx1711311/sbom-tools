@@ -305,7 +305,7 @@ func covertJavaFileToPackage(javaFileList map[string]string, isoFileSystem IsoFi
 		}
 		mvnResult, err := jsonquery.Parse(bytes.NewReader(restResult.Body()))
 		if err != nil {
-			log.Error(err)
+			log.Errorf("%s`s result body: %s, error info: %v", jarPath, restResult.Body(), err)
 			continue
 		}
 		if numFound := jsonquery.FindOne(mvnResult, "response/numFound"); numFound == nil || numFound.InnerText() == "0" {
