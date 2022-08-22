@@ -98,10 +98,12 @@ FROM
 			log.Error(err)
 		}
 
-		javaFileList, err := queryJavaFileListForPackage(*fileListDb, pkgKey)
-		if err != nil {
-			log.Error(err)
-		}
+		// javaFileList, err := queryJavaFileListForPackage(*fileListDb, pkgKey)
+		// if err != nil {
+		// 	log.Error(err)
+		// }
+		// TODO 后续改为值传递checksum
+		javaFileList := make(map[string]string, 0)
 
 		javaPackages, err := covertJavaFileToPackage(javaFileList, isoFileSystem, unzipDir, locationHref)
 		if err != nil {
@@ -305,7 +307,7 @@ func covertJavaFileToPackage(javaFileList map[string]string, isoFileSystem IsoFi
 		}
 		mvnResult, err := jsonquery.Parse(bytes.NewReader(restResult.Body()))
 		if err != nil {
-			log.Error(err)
+			log.Errorf("%s`s result body: %s, error info: %v", jarPath, restResult.Body(), err)
 			continue
 		}
 		if numFound := jsonquery.FindOne(mvnResult, "response/numFound"); numFound == nil || numFound.InnerText() == "0" {
