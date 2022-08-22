@@ -98,10 +98,12 @@ FROM
 			log.Error(err)
 		}
 
-		javaFileList, err := queryJavaFileListForPackage(*fileListDb, pkgKey)
-		if err != nil {
-			log.Error(err)
-		}
+		// javaFileList, err := queryJavaFileListForPackage(*fileListDb, pkgKey)
+		// if err != nil {
+		// 	log.Error(err)
+		// }
+		// TODO 后续改为值传递checksum
+		javaFileList := make(map[string]string, 0)
 
 		javaPackages, err := covertJavaFileToPackage(javaFileList, isoFileSystem, unzipDir, locationHref)
 		if err != nil {
