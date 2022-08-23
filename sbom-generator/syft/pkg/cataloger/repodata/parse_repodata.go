@@ -1,7 +1,6 @@
 package repodata
 
 import (
-	"bytes"
 	"database/sql"
 	"fmt"
 	"os"
@@ -15,13 +14,13 @@ import (
 	"github.com/anchore/syft/syft/file"
 	"github.com/anchore/syft/syft/pkg"
 	"github.com/anchore/syft/syft/source"
-	"github.com/antchfx/jsonquery"
 	"github.com/codingsince1985/checksum"
-	"github.com/go-resty/resty/v2"
 	_ "modernc.org/sqlite"
 )
 
 const mvnRegexpStr = `^mvn\(([A-Za-z0-9-_\.]*)\:([A-Za-z0-9-_\.]*)(\:([A-Za-z0-9-_\.]*))*\)`
+const purlDefaultChecksumNamespace = "sha1"
+const purlDefaultChecksumVersion = "1.0.0"
 
 func parsePackagesInfo(isoFileSystem IsoFileSystem, repodataFileList RepodataFileList, unzipDir string) ([]pkg.Package, error) {
 	primaryDb, err := sql.Open("sqlite", repodataFileList.PrimarySqliteUnBzFilePath)
@@ -98,12 +97,10 @@ FROM
 			log.Error(err)
 		}
 
-		// javaFileList, err := queryJavaFileListForPackage(*fileListDb, pkgKey)
-		// if err != nil {
-		// 	log.Error(err)
-		// }
-		// TODO 后续改为值传递checksum
-		javaFileList := make(map[string]string, 0)
+		javaFileList, err := queryJavaFileListForPackage(*fileListDb, pkgKey)
+		if err != nil {
+			log.Error(err)
+		}
 
 		javaPackages, err := covertJavaFileToPackage(javaFileList, isoFileSystem, unzipDir, locationHref)
 		if err != nil {
@@ -295,34 +292,37 @@ func covertJavaFileToPackage(javaFileList map[string]string, isoFileSystem IsoFi
 			continue
 		}
 
-		restResult, err := resty.New().R().SetQueryParams(map[string]string{
-			"q":    "1:" + sha1,
-			"rows": "1",
-			"wt":   "json",
-		}).SetHeader("Accept", "application/json").
-			Get("https://search.maven.org/solrsearch/select")
-		if err != nil {
-			log.Error(err)
-			continue
-		}
-		mvnResult, err := jsonquery.Parse(bytes.NewReader(restResult.Body()))
-		if err != nil {
-			log.Errorf("%s`s result body: %s, error info: %v", jarPath, restResult.Body(), err)
-			continue
-		}
-		if numFound := jsonquery.FindOne(mvnResult, "response/numFound"); numFound == nil || numFound.InnerText() == "0" {
-			log.Warnf("%s `s jar:%s, can not find artifact in maven central. sha1: %s", locationHref, jarPath, sha1)
-			continue
-		}
+		// restResult, err := resty.New().R().SetQueryParams(map[string]string{
+		// 	"q":    "1:" + sha1,
+		// 	"rows": "1",
+		// 	"wt":   "json",
+		// }).SetHeader("Accept", "application/json").
+		// 	Get("https://search.maven.org/solrsearch/select")
+		// if err != nil {
+		// 	log.Error(err)
+		// 	continue
+		// }
+		// mvnResult, err := jsonquery.Parse(bytes.NewReader(restResult.Body()))
+		// if err != nil {
+		// 	log.Errorf("%s`s result body: %s, error info: %v", jarPath, restResult.Body(), err)
+		// 	continue
+		// }
+		// if numFound := jsonquery.FindOne(mvnResult, "response/numFound"); numFound == nil || numFound.InnerText() == "0" {
+		// 	log.Warnf("%s `s jar:%s, can not find artifact in maven central. sha1: %s", locationHref, jarPath, sha1)
+		// 	continue
+		// }
 
-		groupId := jsonquery.FindOne(mvnResult, "response/docs/*/g").InnerText()
-		artifactId := jsonquery.FindOne(mvnResult, "response/docs/*/a").InnerText()
-		version := jsonquery.FindOne(mvnResult, "response/docs/*/v").InnerText()
+		// groupId := jsonquery.FindOne(mvnResult, "response/docs/*/g").InnerText()
+		// artifactId := jsonquery.FindOne(mvnResult, "response/docs/*/a").InnerText()
+		// version := jsonquery.FindOne(mvnResult, "response/docs/*/v").InnerText()
+
+		// TODO use config param to switch between GAV or checksum
+
 		jarPackage := pkg.RepodataPackageRecord{
 			PkgType:    packageurl.TypeMaven,
-			GroupId:    groupId,
-			ArtifactId: artifactId,
-			Version:    version,
+			GroupId:    purlDefaultChecksumNamespace,
+			ArtifactId: sha1,
+			Version:    purlDefaultChecksumVersion,
 		}
 		javaPackagesMap[strings.Join([]string{jarPackage.PkgType, jarPackage.GroupId, jarPackage.ArtifactId, jarPackage.Version}, ":")] = jarPackage
 	}

@@ -3,7 +3,6 @@ package spdxhelpers
 import (
 	"strings"
 
-	"github.com/anchore/syft/internal/log"
 	"github.com/anchore/syft/internal/spdxlicense"
 	"github.com/anchore/syft/syft/pkg"
 )
@@ -28,7 +27,7 @@ func License(p pkg.Package) string {
 		if value, exists := spdxlicense.ID(l); exists {
 			parsedLicenses = append(parsedLicenses, value)
 		} else {
-			log.Warnf("license: %s is not support", l)
+			// log.Warnf("license: %s is not support", l)
 			parsedLicenses = append(parsedLicenses, l)
 		}
 	}
