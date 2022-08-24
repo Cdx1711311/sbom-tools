@@ -29,6 +29,8 @@ const (
 	BowerExternalRefType ExternalRefType = "bower"
 	// see https://github.com/package-url/purl-spec
 	PurlExternalRefType ExternalRefType = "purl"
+	// use checksum instead of mvn GAV
+	ChecksumExternalRefType ExternalRefType = "checksum"
 	// These point to objects present in the Software Heritage archive by the means of SoftWare Heritage persistent Identifiers (SWHID)
 	SwhExternalRefType ExternalRefType = "swh"
 )

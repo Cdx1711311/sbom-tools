@@ -1,8 +1,12 @@
 package spdxhelpers
 
 import (
+	"strings"
+
 	"github.com/anchore/syft/syft/pkg"
 )
+
+const checksumPrefix = "pkg:maven/sha1"
 
 func ExternalRefs(p pkg.Package, externalCounter *ExternalCounter) (externalRefs []ExternalRef) {
 	externalRefs = make([]ExternalRef, 0)
@@ -34,11 +38,17 @@ func ExternalRefs(p pkg.Package, externalCounter *ExternalCounter) (externalRefs
 
 	pkgExternalList := []string{}
 	for _, externalPurl := range p.ExtPkgPurls {
-		externalRefs = append(externalRefs, ExternalRef{
+		externalRef := ExternalRef{
 			ReferenceCategory: ExternalManagerReferenceCategory,
 			ReferenceLocator:  externalPurl,
-			ReferenceType:     PurlExternalRefType,
-		})
+		}
+		if strings.HasPrefix(externalPurl, checksumPrefix) {
+			externalRef.ReferenceType = ChecksumExternalRefType
+		} else {
+			externalRef.ReferenceType = PurlExternalRefType
+		}
+
+		externalRefs = append(externalRefs, externalRef)
 		externalCounter.ExternalMap[externalPurl] = p.Name
 		pkgExternalList = append(pkgExternalList, externalPurl)
 	}
