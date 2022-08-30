@@ -72,7 +72,7 @@ int probe_SSL_write(struct pt_regs *ctx, void *ssl, void *buf, int num) {
         bpf_get_current_comm(&data->comm, sizeof(data->comm));
         u32 buf_copy_size = min((size_t)MAX_BUF_SIZE, (size_t)num);
         if (buf != 0)
-                ret = bpf_probe_read(data->buf, buf_copy_size, buf);
+                ret = bpf_probe_read_user(data->buf, buf_copy_size, buf);
         if (!ret)
                 data->buf_filled = 1;
         else
