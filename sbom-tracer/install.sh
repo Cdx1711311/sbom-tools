@@ -23,7 +23,6 @@ init() {
 
 install_bcc() {
   echo "======install bcc begin======"
-  sudo ${PACKAGE_MANAGER_APP} -y update
   if [ "${DISTRO}" == "RedHat" ] || [ "${DISTRO}" == "openEuler" ]; then
     sudo ${PACKAGE_MANAGER_APP} -y install gnutls
     sudo ${PACKAGE_MANAGER_APP} -y install bcc
