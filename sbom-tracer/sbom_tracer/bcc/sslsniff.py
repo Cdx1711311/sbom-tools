@@ -129,7 +129,7 @@ def print_event(cpu, data, size):
     print(json.dumps(dict(cmd=decode(event.comm), pid=event.pid, ppid=ppid, data=decode(buf))))
 
 
-b["perf_SSL_write"].open_perf_buffer(print_event)
+b["perf_SSL_write"].open_perf_buffer(print_event, page_cnt=256)
 while 1:
     try:
         b.perf_buffer_poll()
