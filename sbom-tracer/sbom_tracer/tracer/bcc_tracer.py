@@ -94,11 +94,13 @@ class BccTracer(object):
         return shell_exit_status
 
     def stop_trace(self):
-        if execute_recursive("ps -ef | grep 'task-id {}' | grep -v \"grep\"".format(self.task_id))[0] != 0:
-            return
-        execute_recursive("ps -ef | grep 'task-id {}' | grep -v \"grep\" | awk '{{print $2}}' | "
-                          "sudo xargs kill -2".format(self.task_id))
-        time.sleep(1)
+        for _ in range(3):
+            if execute_recursive("ps -ef | grep 'task-id {}' | grep -v \"grep\"".format(self.task_id))[0] != 0:
+                print("successfully stop tracer with task id: {}".format(self.task_id))
+                return
+            execute_recursive("ps -ef | grep 'task-id {}' | grep -v \"grep\" | awk '{{print $2}}' | "
+                              "sudo xargs kill -2".format(self.task_id))
+            time.sleep(3)
 
         for _ in range(3):
             if execute_recursive("ps -ef | grep 'task-id {}' | grep -v \"grep\"".format(self.task_id))[0] != 0:
@@ -106,7 +108,7 @@ class BccTracer(object):
                 break
             execute_recursive("ps -ef | grep 'task-id {}' | grep -v \"grep\" | awk '{{print $2}}' | "
                               "sudo xargs kill -9".format(self.task_id))
-            time.sleep(1)
+            time.sleep(3)
         else:
             print("failed to stop tracer with task id: {}".format(self.task_id))
 

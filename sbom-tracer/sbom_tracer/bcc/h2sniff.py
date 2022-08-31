@@ -73,7 +73,7 @@ int probe_SSL_write(struct pt_regs *ctx, void *ssl, void *buf, int num) {
         bpf_get_current_comm(&data->comm, sizeof(data->comm));
         u32 buf_copy_size = min((size_t)MAX_BUF_SIZE, (size_t)num);
         if (buf != 0)
-                ret = bpf_probe_read_user(data->buf, buf_copy_size, buf);
+                ret = BPF_PROBE_READ_FUNC(data->buf, buf_copy_size, buf);
         if (!ret)
                 data->buf_filled = 1;
         else
@@ -83,19 +83,25 @@ int probe_SSL_write(struct pt_regs *ctx, void *ssl, void *buf, int num) {
 }
 """
 
-b = BPF(text=prog)
+bpf_with_bpf_probe_read_user = prog.replace("BPF_PROBE_READ_FUNC", "bpf_probe_read_user")
+bpf_with_bpf_probe_read = prog.replace("BPF_PROBE_READ_FUNC", "bpf_probe_read")
 
-
-def attach_without_exc(name, sym):
+ssl_list = [("ssl", "SSL_write"), ("gnutls", "gnutls_record_send"), ("nspr4", "PR_Write"), ("nspr4", "PR_Send")]
+exc_count = 0
+b = BPF(text=bpf_with_bpf_probe_read_user)
+for name, sym in ssl_list:
     try:
         b.attach_uprobe(name=name, sym=sym, fn_name="probe_SSL_write", pid=-1)
     except:
-        pass
+        exc_count += 1
 
-
-ssl_list = [("ssl", "SSL_write"), ("gnutls", "gnutls_record_send"), ("nspr4", "PR_Write"), ("nspr4", "PR_Send")]
-for name, sym in ssl_list:
-    attach_without_exc(name, sym)
+if exc_count == len(ssl_list):
+    b = BPF(text=bpf_with_bpf_probe_read)
+    for name, sym in ssl_list:
+        try:
+            b.attach_uprobe(name=name, sym=sym, fn_name="probe_SSL_write", pid=-1)
+        except:
+            pass
 
 FRAMES = [
     "DATA",
@@ -159,7 +165,7 @@ def print_event(cpu, data, size):
         buf = buf[9 + frame_len:]
 
 
-b["perf_SSL_write"].open_perf_buffer(print_event)
+b["perf_SSL_write"].open_perf_buffer(print_event, page_cnt=256)
 
 while 1:
     try:
