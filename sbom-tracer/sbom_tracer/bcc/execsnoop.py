@@ -1,5 +1,6 @@
 #!/usr/bin/python
 # @lint-avoid-python-3-compatibility-imports
+# Copyright 2016 Netflix, Inc.
 # Licensed under the Apache License, Version 2.0 (the "License")
 
 from __future__ import print_function
@@ -60,9 +61,9 @@ BPF_PERF_OUTPUT(events);
 static int submit_env(struct pt_regs *ctx, void *ptr, struct data_t *data)
 {
     const char *env = NULL;
-    bpf_probe_read_user(&env, sizeof(env), ptr);
+    BPF_PROBE_READ_FUNC(&env, sizeof(env), ptr);
     if (env) {
-        bpf_probe_read_user(data->env, sizeof(data->env), env);
+        BPF_PROBE_READ_FUNC(data->env, sizeof(data->env), env);
         events.perf_submit(ctx, data, sizeof(struct data_t));
         return 1;
     }
@@ -71,7 +72,7 @@ static int submit_env(struct pt_regs *ctx, void *ptr, struct data_t *data)
 
 static int __submit_arg(struct pt_regs *ctx, void *ptr, struct data_t *data)
 {
-    bpf_probe_read_user(data->argv, sizeof(data->argv), ptr);
+    BPF_PROBE_READ_FUNC(data->argv, sizeof(data->argv), ptr);
     events.perf_submit(ctx, data, sizeof(struct data_t));
     return 1;
 }
@@ -79,7 +80,7 @@ static int __submit_arg(struct pt_regs *ctx, void *ptr, struct data_t *data)
 static int submit_arg(struct pt_regs *ctx, void *ptr, struct data_t *data)
 {
     const char *argp = NULL;
-    bpf_probe_read_user(&argp, sizeof(argp), ptr);
+    BPF_PROBE_READ_FUNC(&argp, sizeof(argp), ptr);
     if (argp) {
         return __submit_arg(ctx, (void *)(argp), data);
     }
@@ -159,10 +160,19 @@ int do_ret_sys_execve(struct pt_regs *ctx)
 """
 
 # initialize BPF
-b = BPF(text=bpf_text)
-execve_fnname = b.get_syscall_fnname("execve")
-b.attach_kprobe(event=execve_fnname, fn_name="syscall__execve")
-b.attach_kretprobe(event=execve_fnname, fn_name="do_ret_sys_execve")
+bpf_with_bpf_probe_read_user = bpf_text.replace("BPF_PROBE_READ_FUNC", "bpf_probe_read_user")
+bpf_with_bpf_probe_read = bpf_text.replace("BPF_PROBE_READ_FUNC", "bpf_probe_read")
+
+try:
+    b = BPF(text=bpf_with_bpf_probe_read_user)
+    execve_fnname = b.get_syscall_fnname("execve")
+    b.attach_kprobe(event=execve_fnname, fn_name="syscall__execve")
+    b.attach_kretprobe(event=execve_fnname, fn_name="do_ret_sys_execve")
+except:
+    b = BPF(text=bpf_with_bpf_probe_read)
+    execve_fnname = b.get_syscall_fnname("execve")
+    b.attach_kprobe(event=execve_fnname, fn_name="syscall__execve")
+    b.attach_kretprobe(event=execve_fnname, fn_name="do_ret_sys_execve")
 
 
 class EventType(object):
