@@ -12,7 +12,7 @@ def run_daemon(target, args, kwargs):
     thread.daemon = True
     thread.start()
 
-    time.sleep(1)
+    time.sleep(3)
     if not thread.is_alive():
         raise Exception("failed to run command as daemon")
 
