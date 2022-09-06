@@ -147,7 +147,7 @@ private fun Package.toSpdxPackage(licenseInfoResolver: LicenseInfoResolver, isPr
     SpdxPackage(
         spdxId = id.toSpdxId(if (isProject) "Project" else "Package"),
         copyrightText = getSpdxCopyrightText(licenseInfoResolver, id),
-        downloadLocation = binaryArtifact.url.nullOrBlankToSpdxNone(),
+        downloadLocation = sourceArtifact.url.nullOrBlankToSpdxNone(),
         externalRefs = if (isProject) emptyList() else toSpdxExternalReferences(),
         filesAnalyzed = false,
         homepage = homepageUrl.nullOrBlankToSpdxNone(),
