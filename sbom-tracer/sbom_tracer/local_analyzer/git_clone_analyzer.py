@@ -57,8 +57,7 @@ class GitCloneAnalyzer(AnalyzerBase):
 
     def _analyze(self, cmd, full_cmd, cwd, fd):
         try:
-            result, _ = parser.parse_known_args(re.search(r"git\s*clone(.*)", full_cmd).group(1).split())
-            git_clone_dir = result.directory if result.directory else result.repository
+            git_clone_dir = self._infer_git_clone_dir(full_cmd)
             os.chdir(os.path.join(cwd, git_clone_dir))
             version_string = execute(
                 "git describe --tags --always", stdout=subprocess.PIPE, stderr=subprocess.PIPE)[1].strip()
@@ -69,3 +68,13 @@ class GitCloneAnalyzer(AnalyzerBase):
             fd.write(json.dumps(dict(commit_id=commit_id, version_string=version_string, url=url, tag=self.tag)) + "\n")
         except:
             pass
+
+    @classmethod
+    def _infer_git_clone_dir(cls, full_cmd):
+        result, unknown = parser.parse_known_args(re.search(r"git\s*clone(.*)", full_cmd).group(1).split())
+        if result.directory:
+            return result.directory
+        if unknown:
+            # intermixed command, e.g., git clone https://github.com/iovisor/bcc.git -b master bcc
+            return unknown[0]
+        return result.repository.split("/")[-1].replace(".git", "")
