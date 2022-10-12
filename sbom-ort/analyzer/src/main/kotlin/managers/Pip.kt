@@ -556,7 +556,7 @@ class Pip(
         }
     }
 
-    private fun getPackageFromPyPi(id: Identifier): Package {
+    fun getPackageFromPyPi(id: Identifier): Package {
         // See https://wiki.python.org/moin/PyPIJSON.
         val url = "https://pypi.org/pypi/${id.name}/${id.version}/json"
 
