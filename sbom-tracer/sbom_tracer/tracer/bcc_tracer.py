@@ -154,6 +154,8 @@ class BccTracer(object):
                     shutil.copy(os.path.join(self.task_project_dir, filename), self.task_workspace)
 
     def tar(self):
+        if os.path.exists(self.tar_file):
+            os.unlink(self.tar_file)
         os.mknod(self.tar_file)
         tar_file = tarfile.open(self.tar_file, "w:gz")
         for filename in os.listdir(self.task_workspace):
