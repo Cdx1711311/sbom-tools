@@ -11,6 +11,7 @@ import (
 
 	"github.com/anchore/packageurl-go"
 	"github.com/anchore/syft/internal/log"
+	"github.com/anchore/syft/syft/artifact"
 	"github.com/anchore/syft/syft/file"
 	"github.com/anchore/syft/syft/pkg"
 	"github.com/anchore/syft/syft/source"
@@ -21,6 +22,7 @@ import (
 const mvnRegexpStr = `^mvn\(([A-Za-z0-9-_\.]*)\:([A-Za-z0-9-_\.]*)(\:([A-Za-z0-9-_\.]*))*\)`
 const purlDefaultChecksumNamespace = "sha1"
 const purlDefaultChecksumVersion = "1.0.0"
+const packageIdPattern = "rpm-%s-%s"
 
 func parsePackagesInfo(isoFileSystem IsoFileSystem, repodataFileList RepodataFileList, unzipDir string) ([]pkg.Package, error) {
 	primaryDb, err := sql.Open("sqlite", repodataFileList.PrimarySqliteUnBzFilePath)
@@ -43,6 +45,7 @@ func parsePackagesInfo(isoFileSystem IsoFileSystem, repodataFileList RepodataFil
 	version,
 	epoch,
 	RELEASE,
+	ifnull( summary, "") summary,
 	ifnull( description, "") description,
 	rpm_sourcerpm sourceRpm,
 	rpm_vendor vendor,
@@ -72,6 +75,7 @@ FROM
 		var packager string
 		var epoch string
 		var release string
+		var summary string
 		var description string
 		var sourceRpm string
 		var vendor string
@@ -81,7 +85,7 @@ FROM
 		var checksumType string
 		var locationHref string
 
-		if err = rows.Scan(&pkgId, &pkgKey, &name, &arch, &version, &epoch, &release, &description, &sourceRpm, &vendor, &packager, &license, &size, &homepage, &checksumType, &locationHref); err != nil {
+		if err = rows.Scan(&pkgId, &pkgKey, &name, &arch, &version, &epoch, &release, &summary, &description, &sourceRpm, &vendor, &packager, &license, &size, &homepage, &checksumType, &locationHref); err != nil {
 			log.Error(err)
 			continue
 		}
@@ -119,6 +123,7 @@ FROM
 			License:     license,
 			Size:        size,
 			Homepage:    homepage,
+			Summary:     summary,
 			Description: description,
 			RpmDigests: []file.Digest{{
 				Algorithm: checksumType,
@@ -140,7 +145,8 @@ FROM
 			Metadata:     metadata,
 		}
 
-		p.SetID()
+		// p.SetID()
+		p.OverrideID(artifact.ID(fmt.Sprintf(packageIdPattern, name, version)))
 
 		allPkgs = append(allPkgs, p)
 	}
@@ -375,4 +381,72 @@ func mapToSlice(input map[string]pkg.RepodataPackageRecord) []pkg.RepodataPackag
 		output = append(output, v)
 	}
 	return output
+}
+
+func parseRelationship(repodataFileList RepodataFileList) ([]artifact.Relationship, error) {
+	primaryDb, err := sql.Open("sqlite", repodataFileList.PrimarySqliteUnBzFilePath)
+	if err != nil {
+		return nil, err
+	}
+	defer primaryDb.Close()
+
+	sql := `SELECT DISTINCT
+				r.pkgKey fromPkgKey,
+				fromPkg.name fromPkgName,
+				fromPkg.version fromPkgVersion,
+				pro.pkgKey toPkgKey,
+				toPkg.name toPkgName,
+				toPkg.version toPkgVersion
+			FROM
+				requires r,
+				provides pro
+				LEFT JOIN packages AS fromPkg ON fromPkg.pkgKey = fromPkgKey
+				LEFT JOIN packages AS toPkg ON toPkg.pkgKey = toPkgKey 
+			WHERE
+				r.name = pro.name 
+			ORDER BY
+				fromPkgKey,
+				toPkgKey;`
+
+	rows, err := primaryDb.Query(sql)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	allRelationships := make([]artifact.Relationship, 0)
+
+	for rows.Next() {
+		var fromPkgKey string
+		var fromPkgName string
+		var fromPkgVersion string
+		var toPkgKey string
+		var toPkgName string
+		var toPkgVersion string
+
+		if err = rows.Scan(&fromPkgKey, &fromPkgName, &fromPkgVersion, &toPkgKey, &toPkgName, &toPkgVersion); err != nil {
+			log.Error(err)
+			continue
+		}
+
+		fromPkg := pkg.Package{}
+		fromPkg.OverrideID(artifact.ID(fmt.Sprintf(packageIdPattern, fromPkgName, fromPkgVersion)))
+
+		toPkg := pkg.Package{}
+		toPkg.OverrideID(artifact.ID(fmt.Sprintf(packageIdPattern, toPkgName, toPkgVersion)))
+
+		r := artifact.Relationship{
+			From: fromPkg,
+			To:   toPkg,
+			Type: artifact.RuntimeDependencyOfRelationship,
+		}
+
+		allRelationships = append(allRelationships, r)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return allRelationships, nil
 }
