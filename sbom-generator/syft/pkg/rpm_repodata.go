@@ -29,6 +29,7 @@ type RpmRepodata struct {
 	Vendor      string                  `json:"vendor"`
 	Packager    string                  `json:"packager"`
 	Homepage    string                  `mapstructure:"homepage" json:"homepage"`
+	Summary     string                  `mapstructure:"summary" json:"summary"`
 	Description string                  `mapstructure:"description" json:"description"`
 	RpmDigests  []file.Digest           `hash:"ignore" json:"digest"`
 	Files       []RepodataFileRecord    `json:"files"`

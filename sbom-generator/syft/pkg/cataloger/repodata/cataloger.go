@@ -72,6 +72,10 @@ func parseRepodata(isoFileSystem IsoFileSystem, repodataFileList RepodataFileLis
 		return nil, nil, fmt.Errorf("unable to parse repodata for package: %w", err)
 	}
 
-	var discoveredShips []artifact.Relationship = nil
+	discoveredShips, err := parseRelationship(repodataFileList)
+	if err != nil {
+		return nil, nil, fmt.Errorf("unable to parse repodata for relationship: %w", err)
+	}
+
 	return discoveredPkgs, discoveredShips, nil
 }

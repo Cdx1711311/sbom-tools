@@ -103,6 +103,7 @@ func toPackages(catalog *pkg.Catalog, relationships []artifact.Relationship) []m
 
 		packages = append(packages, model.Package{
 			Checksums:        checksums,
+			Summary:          spdxhelpers.Summary(p),
 			Description:      spdxhelpers.Description(p),
 			DownloadLocation: spdxhelpers.DownloadLocation(p),
 			ExternalRefs:     externalRefs,
@@ -267,6 +268,8 @@ func toRelationships(relationships []artifact.Relationship) (result []model.Rela
 
 func lookupRelationship(ty artifact.RelationshipType) (bool, spdxhelpers.RelationshipType, string) {
 	switch ty {
+	case artifact.RuntimeDependencyOfRelationship:
+		return true, spdxhelpers.RuntimeDependencyOfRelationship, ""
 	case artifact.ContainsRelationship:
 		return true, spdxhelpers.ContainsRelationship, ""
 	case artifact.OwnershipByFileOverlapRelationship:
