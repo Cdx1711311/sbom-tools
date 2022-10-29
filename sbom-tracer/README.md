@@ -8,7 +8,7 @@ Make use of the eBPF-based tracing tools [BCC](https://github.com/iovisor/bcc) t
 ## Installing
 `bash install.sh`
 
-*SBOM Tracer* is tested on CentOS7 (x86_64, aarch64, vm, docker) by now.
+*SBOM Tracer* is tested on CentOS7 (x86_64, aarch64, vm, docker) and openEuler 20.03 & 22.03 (x86_64, aarch64, vm) by now.
 
 The Linux kernel version of the **docker host** must be higher than 4.17, because [uprobes cannot successfully attach to binaries located in a directory
 mounted with overlayfs](https://github.com/torvalds/linux/commit/f0a2aa5a2a406d0a57aa9b320ffaa5538672b6c5).
@@ -24,8 +24,25 @@ e.g., `sbom_tracer -s "bash build.sh" -w "/tmp/sbom_tracer_workspace" -k "/lib/m
 4. `-t`, `--task_id`: task id of a run. If not specified, task id will be the current timestamp
 
 ### Run in Docker
-To run *SBOM Tracer* in a docker, the docker must be run in **privileged mode**, and it's recommended to mount /src to get proper kernel sources, e.g., 
+To run *SBOM Tracer* in a docker, the docker must be run in **privileged mode** or granted caps **cap_sys_admin cap_syslog cap_ipc_lock**, and it's recommended to mount /src to get proper kernel sources, e.g., 
 `docker run -it --privileged -v /usr:/host/usr:ro your_docker_image /bin/bash`
+
+### Container and host os compatibility
+If container and host os is not compatible, *SBOM Tracer* may not run or produce correct results.
+
+#### x86_64
+| container  | host            | compatible | 
+|------------|-----------------|------------|
+| CentOS 7.6 | CentOS 7.6      | false      | 
+| CentOS 7.6 | EulerOS 2.5     | false      |
+| CentOS 7.6 | EulerOS 2.9     | true       | 
+| CentOS 7.6 | openEuler 20.03 | true       | 
+
+#### aarch64
+| container  | host        | compatible | 
+|------------|-------------|------------|
+| CentOS 7.6 | CentOS 7.6  | true       | 
+| CentOS 7.6 | EulerOS 2.8 | false      |
 
 ## Output
 *SBOM Tracer* will output four logs:
