@@ -8,4 +8,4 @@ SSLSNIFF_PATH = os.path.join(PROJECT_DIR, "bcc/sslsniff.py")
 H2SNIFF_PATH = os.path.join(PROJECT_DIR, "bcc/h2sniff.py")
 EXECSNOOP_PATH = os.path.join(PROJECT_DIR, "bcc/execsnoop.py")
 
-DEFINITION_FILE_PATTERNS = [r".*requirements.*\.txt"]
+DEFINITION_FILE_PATTERNS = [r"^.*requirements.*\.txt$", r"^setup.py$", r"^pom.xml$"]
