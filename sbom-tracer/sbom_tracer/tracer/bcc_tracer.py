@@ -148,10 +148,13 @@ class BccTracer(object):
             analyzer().analyze(cmd, full_cmd, cwd, fd)
 
     def copy_definition_files(self):
-        for filename in os.listdir(self.task_project_dir):
-            for pattern in DEFINITION_FILE_PATTERNS:
-                if re.match(pattern, filename):
-                    shutil.copy(os.path.join(self.task_project_dir, filename), self.task_workspace)
+        for root, _, files in os.walk(self.task_project_dir):
+            for f in files:
+                if re.match("|".join(DEFINITION_FILE_PATTERNS), f):
+                    target_dir = os.path.join(self.task_workspace, root.lstrip("/"))
+                    if not os.path.exists(target_dir):
+                        os.makedirs(target_dir)
+                    shutil.copy(os.path.join(root, f), target_dir)
 
     def tar(self):
         if os.path.exists(self.tar_file):
