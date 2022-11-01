@@ -117,7 +117,9 @@ class Maven(
         )
 
         projectBuildingResult.dependencies.forEach { node ->
-            graphBuilder.addDependency(DependencyGraph.qualifyScope(projectId, node.dependency.scope), node)
+            if (!node.dependency.scope.equals("test")) {
+                graphBuilder.addDependency(DependencyGraph.qualifyScope(projectId, node.dependency.scope), node)
+            }
         }
 
         val declaredLicenses = MavenSupport.parseLicenses(mavenProject)
