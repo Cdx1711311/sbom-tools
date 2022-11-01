@@ -8,9 +8,9 @@ from sbom_tracer.util.shell_util import execute
 
 class GitSubmoduleAnalyzer(AnalyzerBase):
     def __init__(self):
-        super(GitSubmoduleAnalyzer, self).__init__("git", r"submodule\s*(update|init)", "git_submodule")
+        super(GitSubmoduleAnalyzer, self).__init__(r"^git$", r"submodule\s*(update|init)", "git_submodule")
 
-    def _analyze(self, cmd, full_cmd, cwd, fd):
+    def _analyze(self, cmd, full_cmd, cwd, fd, task_workspace):
         try:
             os.chdir(cwd)
             out = execute("git submodule status --recursive", stdout=subprocess.PIPE, stderr=subprocess.PIPE)[1]

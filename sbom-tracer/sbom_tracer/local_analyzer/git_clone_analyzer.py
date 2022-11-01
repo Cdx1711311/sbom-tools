@@ -53,9 +53,9 @@ parser.add_argument("directory", nargs="?")
 
 class GitCloneAnalyzer(AnalyzerBase):
     def __init__(self):
-        super(GitCloneAnalyzer, self).__init__("git", r"git\s*clone.*", "git_clone")
+        super(GitCloneAnalyzer, self).__init__(r"^git$", r"git\s*clone.*", "git_clone")
 
-    def _analyze(self, cmd, full_cmd, cwd, fd):
+    def _analyze(self, cmd, full_cmd, cwd, fd, task_workspace):
         try:
             git_clone_dir = self._infer_git_clone_dir(full_cmd)
             os.chdir(os.path.join(cwd, git_clone_dir))
