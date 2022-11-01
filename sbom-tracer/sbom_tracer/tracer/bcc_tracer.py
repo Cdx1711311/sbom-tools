@@ -9,7 +9,8 @@ import traceback
 
 from sbom_tracer.local_analyzer.analyzer_factory import AnalyzerFactory
 from sbom_tracer.util.common_util import run_daemon, get_command_config, infer_kernel_source_dir
-from sbom_tracer.util.const import EXECSNOOP_PATH, H2SNIFF_PATH, SSLSNIFF_PATH, PROJECT_NAME, DEFINITION_FILE_PATTERNS
+from sbom_tracer.util.const import EXECSNOOP_PATH, H2SNIFF_PATH, SSLSNIFF_PATH, PROJECT_NAME, \
+    DEFINITION_FILE_PATTERNS, DEFINITION_FILE_DIR_NAME_SUBSTR_BLACK_LIST
 from sbom_tracer.util.shell_util import execute, execute_recursive
 
 
@@ -149,6 +150,8 @@ class BccTracer(object):
 
     def copy_definition_files(self):
         for root, _, files in os.walk(self.task_project_dir):
+            if any(sub_str in root.lower() for sub_str in DEFINITION_FILE_DIR_NAME_SUBSTR_BLACK_LIST):
+                continue
             for f in files:
                 if re.match("|".join(DEFINITION_FILE_PATTERNS), f):
                     target_dir = os.path.join(self.task_workspace, root.lstrip("/"))

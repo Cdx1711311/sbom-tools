@@ -10,3 +10,4 @@ EXECSNOOP_PATH = os.path.join(PROJECT_DIR, "bcc/execsnoop.py")
 
 DEFINITION_FILE_PATTERNS = [r"^.*requirements.*\.txt$", r"^setup\.py$", r"^pom\.xml$", r"^build\.gradle$",
                             r"^build\.gradle\.kts$", r"^settings\.gradle$", r"^settings\.gradle\.kts$"]
+DEFINITION_FILE_DIR_NAME_SUBSTR_BLACK_LIST = ["test", "example", "sample"]
