@@ -11,7 +11,8 @@ EXECSNOOP_PATH = os.path.join(PROJECT_DIR, "bcc/execsnoop.py")
 PYTHON_DEFINITION_FILE_PATTERNS = [r"^.*requirements.*\.txt$", r"^setup\.py$"]
 MAVEN_DEFINITION_FILE_PATTERNS = [r"^pom\.xml$"]
 GRADLE_DEFINITION_FILE_PATTERNS = [r"^build\.gradle$", r"^build\.gradle\.kts$",
-                                   r"^settings\.gradle$", r"^settings\.gradle\.kts$"]
+                                   r"^settings\.gradle$", r"^settings\.gradle\.kts$",
+                                   r"^gradle\.properties$", r"^libs\.versions\.toml$"]
 DEFINITION_FILE_PATTERNS = PYTHON_DEFINITION_FILE_PATTERNS + MAVEN_DEFINITION_FILE_PATTERNS + \
                            GRADLE_DEFINITION_FILE_PATTERNS
 DEFINITION_FILE_SUBSTR_BLACK_LIST = ["test", "example", "sample", "dev"]
