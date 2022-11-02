@@ -5,7 +5,7 @@ from sbom_tracer.util.const import PYTHON_DEFINITION_FILE_PATTERNS
 
 class PipAnalyzer(AnalyzerBase):
     def __init__(self):
-        super(PipAnalyzer, self).__init__(r"^python(2|3)?$", r".*", "")
+        super(PipAnalyzer, self).__init__(r"^python((2|3)?|(2|3)+[\d.]+)$", r".*", "")
 
     def _analyze(self, cmd, full_cmd, cwd, fd, task_workspace):
         try:
