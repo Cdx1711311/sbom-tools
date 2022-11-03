@@ -14,9 +14,9 @@ class MvnAnalyzer(AnalyzerBase):
     def _analyze(self, cmd, full_cmd, cwd, fd, task_workspace):
         try:
             os.chdir(cwd)
-            paths = [line for line in
-                     execute('mvn -q --also-make exec:exec -Dexec.executable="pwd"', stdout=subprocess.PIPE)[1].strip()
-                     if line.startswith("/") or line.startswith("\\")]
+            paths = [line for line in execute(
+                '%s -q --also-make exec:exec -Dexec.executable="pwd"' % full_cmd.strip().split()[0],
+                stdout=subprocess.PIPE)[1].strip().split("\n") if line.startswith("/") or line.startswith("\\")]
             for path in paths:
                 copy_definition_files(path, task_workspace, MAVEN_DEFINITION_FILE_PATTERNS)
         except:

@@ -13,15 +13,16 @@ class GitSubmoduleAnalyzer(AnalyzerBase):
     def _analyze(self, cmd, full_cmd, cwd, fd, task_workspace):
         try:
             os.chdir(cwd)
-            out = execute("git submodule status --recursive", stdout=subprocess.PIPE, stderr=subprocess.PIPE)[1]
+            out = execute("%s submodule status --recursive" % full_cmd.strip().split()[0],
+                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)[1]
             submodules = out.strip().split("\n")
             for submodule in submodules:
                 if not submodule or submodule.startswith("-"):
                     continue
                 commit_id, package_name, version_string = submodule.strip().split()
                 os.chdir(os.path.join(cwd, package_name))
-                url = execute(
-                    "git config --get remote.origin.url", stdout=subprocess.PIPE, stderr=subprocess.PIPE)[1].strip()
+                url = execute("%s config --get remote.origin.url" % full_cmd.strip().split()[0],
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)[1].strip()
                 fd.write(json.dumps(dict(commit_id=commit_id, version_string=version_string, url=url, tag=self.tag))
                          + "\n")
         except:
