@@ -138,7 +138,7 @@ data class SpdxDocument(
 
         require(dataLicense.isNotBlank()) { "The data license must not be blank." }
 
-        require(packages.isNotEmpty()) { "At least one package must be listed in packages" }
+//        require(packages.isNotEmpty()) { "At least one package must be listed in packages" }
 
         val duplicateExternalDocumentRefs = externalDocumentRefs.getDuplicates { it.externalDocumentId }
         require(duplicateExternalDocumentRefs.isEmpty()) {
@@ -163,10 +163,10 @@ data class SpdxDocument(
             "The document must not contain duplicate snippets but has ${duplicateSnippets.keys}."
         }
 
-        val hasDescribesRelationship = relationships.any { it.relationshipType == SpdxRelationship.Type.DESCRIBES }
-        require(hasDescribesRelationship || documentDescribes.isNotEmpty()) {
-            "The document must either have at least one relationship of type 'DESCRIBES' or contain the " +
-                    "'documentDescribes' field."
-        }
+//        val hasDescribesRelationship = relationships.any { it.relationshipType == SpdxRelationship.Type.DESCRIBES }
+//        require(hasDescribesRelationship || documentDescribes.isNotEmpty()) {
+//            "The document must either have at least one relationship of type 'DESCRIBES' or contain the " +
+//                    "'documentDescribes' field."
+//        }
     }
 }

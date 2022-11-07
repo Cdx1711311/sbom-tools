@@ -1,6 +1,5 @@
 import json
 import os
-import re
 import shutil
 import subprocess
 import tarfile
@@ -8,7 +7,7 @@ import time
 import traceback
 
 from sbom_tracer.local_analyzer.analyzer_factory import AnalyzerFactory
-from sbom_tracer.util.common_util import run_daemon, get_command_config, infer_kernel_source_dir
+from sbom_tracer.util.common_util import run_daemon, get_command_config, infer_kernel_source_dir, copy_definition_files
 from sbom_tracer.util.const import EXECSNOOP_PATH, H2SNIFF_PATH, SSLSNIFF_PATH, PROJECT_NAME, DEFINITION_FILE_PATTERNS
 from sbom_tracer.util.shell_util import execute, execute_recursive
 
@@ -47,7 +46,7 @@ class BccTracer(object):
         shell_exit_status = self.execute_cmd()
         self.stop_trace()
         self.collect_info()
-        self.copy_definition_files()
+        copy_definition_files(self.task_project_dir, self.task_workspace, DEFINITION_FILE_PATTERNS)
         self.tar()
         return shell_exit_status
 
@@ -136,22 +135,17 @@ class BccTracer(object):
 
                 if self.combine_shell in cmd_dict["full_cmd"] or self.shell_main_pid in cmd_dict["ancestor_pids"]:
                     if cmd_dict["cmd"] in self.config:
-                        self.analyze_executed_command(cmd_dict["cmd"], cmd_dict["full_cmd"], cmd_dict["cwd"], fw)
+                        self.analyze_executed_command(cmd_dict["cmd"], cmd_dict["full_cmd"], cmd_dict["cwd"], fw,
+                                                      self.task_workspace)
 
     @classmethod
     def is_valid_record(cls, cmd_dict):
         return all(cmd_dict.get(k) for k in ("pid", "ppid", "cmd", "full_cmd", "ancestor_pids"))
 
     @classmethod
-    def analyze_executed_command(cls, cmd, full_cmd, cwd, fd):
+    def analyze_executed_command(cls, cmd, full_cmd, cwd, fd, task_workspace):
         for analyzer in AnalyzerFactory.get_all_analyzers():
-            analyzer().analyze(cmd, full_cmd, cwd, fd)
-
-    def copy_definition_files(self):
-        for filename in os.listdir(self.task_project_dir):
-            for pattern in DEFINITION_FILE_PATTERNS:
-                if re.match(pattern, filename):
-                    shutil.copy(os.path.join(self.task_project_dir, filename), self.task_workspace)
+            analyzer().analyze(cmd, full_cmd, cwd, fd, task_workspace)
 
     def tar(self):
         if os.path.exists(self.tar_file):

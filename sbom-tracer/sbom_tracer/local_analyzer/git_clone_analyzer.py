@@ -53,18 +53,18 @@ parser.add_argument("directory", nargs="?")
 
 class GitCloneAnalyzer(AnalyzerBase):
     def __init__(self):
-        super(GitCloneAnalyzer, self).__init__("git", r"git\s*clone.*", "git_clone")
+        super(GitCloneAnalyzer, self).__init__(r"^git$", r"git\s*clone.*", "git_clone")
 
-    def _analyze(self, cmd, full_cmd, cwd, fd):
+    def _analyze(self, cmd, full_cmd, cwd, fd, task_workspace):
         try:
             git_clone_dir = self._infer_git_clone_dir(full_cmd)
             os.chdir(os.path.join(cwd, git_clone_dir))
-            version_string = execute(
-                "git describe --tags --always", stdout=subprocess.PIPE, stderr=subprocess.PIPE)[1].strip()
-            commit_id = execute(
-                "git rev-parse --short HEAD", stdout=subprocess.PIPE, stderr=subprocess.PIPE)[1].strip()
-            url = execute(
-                "git config --get remote.origin.url", stdout=subprocess.PIPE, stderr=subprocess.PIPE)[1].strip()
+            version_string = execute("%s describe --tags --always" % full_cmd.strip().split()[0],
+                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)[1].strip()
+            commit_id = execute("%s rev-parse --short HEAD" % full_cmd.strip().split()[0],
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)[1].strip()
+            url = execute("%s config --get remote.origin.url" % full_cmd.strip().split()[0],
+                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)[1].strip()
             fd.write(json.dumps(dict(commit_id=commit_id, version_string=version_string, url=url, tag=self.tag)) + "\n")
         except:
             pass

@@ -241,11 +241,13 @@ class Gradle(
                 )
 
                 dependencyTreeModel.configurations.forEach { configuration ->
-                    configuration.dependencies.forEach { dependency ->
-                        graphBuilder.addDependency(
-                            DependencyGraph.qualifyScope(projectId, configuration.name),
-                            dependency
-                        )
+                    if (!configuration.name.contains("test", true)) {
+                        configuration.dependencies.forEach { dependency ->
+                            graphBuilder.addDependency(
+                                DependencyGraph.qualifyScope(projectId, configuration.name),
+                                dependency
+                            )
+                        }
                     }
                 }
 
