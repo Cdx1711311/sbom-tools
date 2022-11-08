@@ -391,22 +391,20 @@ func parseRelationship(repodataFileList RepodataFileList) ([]artifact.Relationsh
 	defer primaryDb.Close()
 
 	sql := `SELECT DISTINCT
-				r.pkgKey fromPkgKey,
-				fromPkg.name fromPkgName,
-				fromPkg.version fromPkgVersion,
-				pro.pkgKey toPkgKey,
-				toPkg.name toPkgName,
-				toPkg.version toPkgVersion
-			FROM
-				requires r,
-				provides pro
-				LEFT JOIN packages AS fromPkg ON fromPkg.pkgKey = fromPkgKey
-				LEFT JOIN packages AS toPkg ON toPkg.pkgKey = toPkgKey 
-			WHERE
-				r.name = pro.name 
-			ORDER BY
-				fromPkgKey,
-				toPkgKey;`
+					fromPkg.name fromPkgName,
+					fromPkg.version fromPkgVersion,
+					toPkg.name toPkgName,
+					toPkg.version toPkgVersion
+				FROM
+					requires r,
+					provides pro
+					LEFT JOIN packages AS fromPkg ON fromPkg.pkgKey = r.pkgKey 
+					LEFT JOIN packages AS toPkg ON toPkg.pkgKey = pro.pkgKey 
+				WHERE
+					r.name = pro.name 
+				ORDER BY
+					r.pkgKey,
+					pro.pkgKey`
 
 	rows, err := primaryDb.Query(sql)
 	if err != nil {
@@ -417,14 +415,12 @@ func parseRelationship(repodataFileList RepodataFileList) ([]artifact.Relationsh
 	allRelationships := make([]artifact.Relationship, 0)
 
 	for rows.Next() {
-		var fromPkgKey string
 		var fromPkgName string
 		var fromPkgVersion string
-		var toPkgKey string
 		var toPkgName string
 		var toPkgVersion string
 
-		if err = rows.Scan(&fromPkgKey, &fromPkgName, &fromPkgVersion, &toPkgKey, &toPkgName, &toPkgVersion); err != nil {
+		if err = rows.Scan(&fromPkgName, &fromPkgVersion, &toPkgName, &toPkgVersion); err != nil {
 			log.Error(err)
 			continue
 		}
@@ -438,7 +434,7 @@ func parseRelationship(repodataFileList RepodataFileList) ([]artifact.Relationsh
 		r := artifact.Relationship{
 			From: fromPkg,
 			To:   toPkg,
-			Type: artifact.RuntimeDependencyOfRelationship,
+			Type: artifact.DependsOnRelationship,
 		}
 
 		allRelationships = append(allRelationships, r)

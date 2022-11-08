@@ -124,6 +124,8 @@ func isExpressiblePackageRelationship(ty artifact.RelationshipType) bool {
 	switch ty {
 	case artifact.RuntimeDependencyOfRelationship:
 		return true
+	case artifact.DependsOnRelationship:
+		return true
 	case artifact.DevDependencyOfRelationship:
 		return true
 	case artifact.BuildDependencyOfRelationship:
