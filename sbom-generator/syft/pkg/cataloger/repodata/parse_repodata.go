@@ -438,7 +438,7 @@ func parseRelationship(repodataFileList RepodataFileList) ([]artifact.Relationsh
 		r := artifact.Relationship{
 			From: fromPkg,
 			To:   toPkg,
-			Type: artifact.RuntimeDependencyOfRelationship,
+			Type: artifact.DependsOnRelationship,
 		}
 
 		allRelationships = append(allRelationships, r)

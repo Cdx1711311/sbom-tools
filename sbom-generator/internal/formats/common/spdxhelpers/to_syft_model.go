@@ -191,6 +191,9 @@ func toSyftRelationships(spdxIDMap map[string]interface{}, doc *spdx.Document2_2
 			case RuntimeDependencyOfRelationship:
 				typ = artifact.RuntimeDependencyOfRelationship
 				to = toPackage
+			case DependsOnRelationship:
+				typ = artifact.DependsOnRelationship
+				to = toPackage
 			case OtherRelationship:
 				// Encoding uses a specifically formatted comment...
 				if strings.Index(r.RelationshipComment, string(artifact.OwnershipByFileOverlapRelationship)) == 0 {

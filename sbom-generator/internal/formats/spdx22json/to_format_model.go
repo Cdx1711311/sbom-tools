@@ -270,6 +270,8 @@ func lookupRelationship(ty artifact.RelationshipType) (bool, spdxhelpers.Relatio
 	switch ty {
 	case artifact.RuntimeDependencyOfRelationship:
 		return true, spdxhelpers.RuntimeDependencyOfRelationship, ""
+	case artifact.DependsOnRelationship:
+		return true, spdxhelpers.DependsOnRelationship, ""
 	case artifact.ContainsRelationship:
 		return true, spdxhelpers.ContainsRelationship, ""
 	case artifact.OwnershipByFileOverlapRelationship:
