@@ -8,7 +8,8 @@ import traceback
 
 from sbom_tracer.local_analyzer.analyzer_factory import AnalyzerFactory
 from sbom_tracer.util.common_util import run_daemon, get_command_config, infer_kernel_source_dir, copy_definition_files
-from sbom_tracer.util.const import EXECSNOOP_PATH, H2SNIFF_PATH, SSLSNIFF_PATH, PROJECT_NAME, DEFINITION_FILE_PATTERNS
+from sbom_tracer.util.const import EXECSNOOP_PATH, H2SNIFF_PATH, SSLSNIFF_PATH, PROJECT_NAME, \
+    DEFINITION_FILE_PATTERNS, TRACE_DATA_DIR_NAME, DEFINITION_FILE_DIR_NAME
 from sbom_tracer.util.shell_util import execute, execute_recursive
 
 
@@ -23,11 +24,14 @@ class BccTracer(object):
         self.combine_shell = "{}_{}.sh".format(self.task_id, PROJECT_NAME)
         self.config = get_command_config()
 
-        self.execsnoop_log = os.path.join(self.task_workspace, "execsnoop.log")
-        self.sslsniff_log = os.path.join(self.task_workspace, "sslsniff.log")
-        self.h2sniff_log = os.path.join(self.task_workspace, "h2sniff.log")
-        self.locally_collected_info_log = os.path.join(self.task_workspace, "locally_collected_info.log")
+        self.execsnoop_log = os.path.join(self.task_workspace, TRACE_DATA_DIR_NAME, "execsnoop.log")
+        self.sslsniff_log = os.path.join(self.task_workspace, TRACE_DATA_DIR_NAME, "sslsniff.log")
+        self.h2sniff_log = os.path.join(self.task_workspace, TRACE_DATA_DIR_NAME, "h2sniff.log")
+        self.locally_collected_info_log = os.path.join(self.task_workspace, TRACE_DATA_DIR_NAME,
+                                                       "locally_collected_info.log")
         self.tar_file = os.path.join(self.task_workspace, "{}_tracer_result.tar.gz".format(self.task_id))
+        self.trace_data_tar_file = os.path.join(self.task_workspace, "{}.tar.gz".format(TRACE_DATA_DIR_NAME))
+        self.def_file_tar_file = os.path.join(self.task_workspace, "{}.tar.gz".format(DEFINITION_FILE_DIR_NAME))
 
         self.shell_main_pid = None
         self.task_project_dir = None
@@ -38,15 +42,18 @@ class BccTracer(object):
             os.makedirs(task_workspace)
         except OSError:
             pass
+        os.mkdir(os.path.join(task_workspace, TRACE_DATA_DIR_NAME))
+        os.mkdir(os.path.join(task_workspace, DEFINITION_FILE_DIR_NAME))
         return task_workspace
 
     def trace(self):
         if not self.init_tracer():
-            raise Exception("init tracer exception! please check if bcc is installed successfully")
+            raise Exception("init tracer exception!")
         shell_exit_status = self.execute_cmd()
         self.stop_trace()
         self.collect_info()
-        copy_definition_files(self.task_project_dir, self.task_workspace, DEFINITION_FILE_PATTERNS)
+        copy_definition_files(self.task_project_dir, os.path.join(self.task_workspace, DEFINITION_FILE_DIR_NAME),
+                              DEFINITION_FILE_PATTERNS)
         self.tar()
         return shell_exit_status
 
@@ -89,7 +96,7 @@ class BccTracer(object):
         with open(file_path, "w") as f:
             f.write(self.shell)
         shell_exit_status, _, _ = execute("bash {}".format(self.combine_shell), cwd=self.shell_path)
-        shutil.move(file_path, os.path.join(self.task_workspace, self.combine_shell))
+        shutil.move(file_path, os.path.join(self.task_workspace, TRACE_DATA_DIR_NAME, self.combine_shell))
         return shell_exit_status
 
     def stop_trace(self):
@@ -148,10 +155,21 @@ class BccTracer(object):
             analyzer().analyze(cmd, full_cmd, cwd, fd, task_workspace)
 
     def tar(self):
-        if os.path.exists(self.tar_file):
-            os.unlink(self.tar_file)
-        os.mknod(self.tar_file)
+        for tf in [self.def_file_tar_file, self.trace_data_tar_file, self.tar_file]:
+            if os.path.exists(tf):
+                os.unlink(tf)
+            os.mknod(tf)
+
+        trace_data_tar_file = tarfile.open(self.trace_data_tar_file, "w:gz")
+        trace_data_tar_file.add(os.path.join(self.task_workspace, TRACE_DATA_DIR_NAME), arcname=TRACE_DATA_DIR_NAME)
+        trace_data_tar_file.close()
+
+        def_file_tar_file = tarfile.open(self.def_file_tar_file, "w:gz")
+        def_file_tar_file.add(os.path.join(self.task_workspace, DEFINITION_FILE_DIR_NAME),
+                              arcname=DEFINITION_FILE_DIR_NAME)
+        def_file_tar_file.close()
+
         tar_file = tarfile.open(self.tar_file, "w:gz")
-        for filename in os.listdir(self.task_workspace):
-            tar_file.add(os.path.join(self.task_workspace, filename), arcname=filename)
+        tar_file.add(self.trace_data_tar_file, arcname=os.path.basename(self.trace_data_tar_file))
+        tar_file.add(self.def_file_tar_file, arcname=os.path.basename(self.def_file_tar_file))
         tar_file.close()
