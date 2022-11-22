@@ -3,7 +3,7 @@ import subprocess
 
 from sbom_tracer.local_analyzer.analyzer_base import AnalyzerBase
 from sbom_tracer.util.common_util import copy_definition_files
-from sbom_tracer.util.const import MAVEN_DEFINITION_FILE_PATTERNS
+from sbom_tracer.util.const import MAVEN_DEFINITION_FILE_PATTERNS, DEFINITION_FILE_DIR_NAME
 from sbom_tracer.util.shell_util import execute
 
 
@@ -18,6 +18,7 @@ class MvnAnalyzer(AnalyzerBase):
                 '%s -q --also-make exec:exec -Dexec.executable="pwd"' % full_cmd.strip().split()[0],
                 stdout=subprocess.PIPE)[1].strip().split("\n") if line.startswith("/") or line.startswith("\\")]
             for path in paths:
-                copy_definition_files(path, task_workspace, MAVEN_DEFINITION_FILE_PATTERNS)
+                copy_definition_files(path, os.path.join(task_workspace, DEFINITION_FILE_DIR_NAME),
+                                      MAVEN_DEFINITION_FILE_PATTERNS)
         except:
             pass

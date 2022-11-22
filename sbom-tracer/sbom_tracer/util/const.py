@@ -16,3 +16,6 @@ GRADLE_DEFINITION_FILE_PATTERNS = [r"^build\.gradle$", r"^build\.gradle\.kts$",
 DEFINITION_FILE_PATTERNS = PYTHON_DEFINITION_FILE_PATTERNS + MAVEN_DEFINITION_FILE_PATTERNS + \
                            GRADLE_DEFINITION_FILE_PATTERNS
 DEFINITION_FILE_SUBSTR_BLACK_LIST = ["test", "example", "sample", "dev"]
+
+TRACE_DATA_DIR_NAME = "trace_data"
+DEFINITION_FILE_DIR_NAME = "definition_file"
