@@ -10,6 +10,7 @@ from sbom_tracer.tracer.bcc_tracer import BccTracer
 
 
 @click.command()
+@click.version_option()
 @click.option("--shell", "-s", help="the input shell command, e.g., 'sh build.sh'")
 @click.option("--workspace", "-w", help="tracer workspace. If not specified, it will be ~/sbom_tracer_workspace")
 @click.option("--kernel_source", "-k", help="the absolute path of kernel sources. If not specified, "

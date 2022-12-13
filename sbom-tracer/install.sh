@@ -29,15 +29,15 @@ install_bcc() {
   if [ "${DISTRO}" == "RedHat" ] || [ "${DISTRO}" == "openEuler" ] || [ "${DISTRO}" == "euleros" ]; then
     sudo ${PACKAGE_MANAGER_APP} -y install gnutls
     sudo ${PACKAGE_MANAGER_APP} -y install bcc
-    sudo ${PACKAGE_MANAGER_APP} -y install kernel-devel-$(uname -r)
     sudo ${PACKAGE_MANAGER_APP} -y install kernel-devel
-    sudo ${PACKAGE_MANAGER_APP} -y install kernel-headers-$(uname -r)
+    sudo ${PACKAGE_MANAGER_APP} -y install kernel-devel-$(uname -r)
     sudo ${PACKAGE_MANAGER_APP} -y install kernel-headers
+    sudo ${PACKAGE_MANAGER_APP} -y install kernel-headers-$(uname -r)
   elif [ "${DISTRO}" == "Debian" ]; then
     sudo ${PACKAGE_MANAGER_APP} -y install gnutls-bin
     sudo ${PACKAGE_MANAGER_APP} -y install bpfcc-tools
-    sudo ${PACKAGE_MANAGER_APP} -y install linux-headers-$(uname -r)
     sudo ${PACKAGE_MANAGER_APP} -y install linux-headers
+    sudo ${PACKAGE_MANAGER_APP} -y install linux-headers-$(uname -r)
   fi
 
   if [ "${DISTRO}" == "RedHat" ] || [ "${DISTRO}" == "openEuler" ] || [ "${DISTRO}" == "euleros" ]; then
@@ -113,7 +113,7 @@ install_sbom_tracer() {
   sudo python${PYTHON_MAJOR_VERSION} -m pip install wheel
   sudo python${PYTHON_MAJOR_VERSION} setup.py bdist_wheel
   sudo python${PYTHON_MAJOR_VERSION} -m pip uninstall -y sbom_tracer
-  sudo python${PYTHON_MAJOR_VERSION} -m pip install dist/sbom_tracer-1.0.0-py*-none-any.whl
+  sudo python${PYTHON_MAJOR_VERSION} -m pip install dist/sbom_tracer-*-py*-none-any.whl
 
   if ! sudo sbom_tracer --help; then
     if ! sbom_tracer --help; then
