@@ -100,23 +100,13 @@ class BccTracer(object):
         return shell_exit_status
 
     def stop_trace(self):
-        for _ in range(3):
-            if execute_recursive("ps -ef | grep 'task-id {}' | grep -v \"grep\"".format(self.task_id))[0] != 0:
+        while True:
+            if execute_recursive("ps -ewwf | grep 'task-id {}' | grep -v \"grep\"".format(self.task_id))[0] != 0:
                 print("successfully stop tracer with task id: {}".format(self.task_id))
                 return
-            execute_recursive("ps -ef | grep 'task-id {}' | grep -v \"grep\" | awk '{{print $2}}' | "
-                              "sudo xargs kill -2".format(self.task_id))
+            execute_recursive("ps -ewwf | grep 'task-id {}' | grep -v \"grep\" | awk '{{print $2}}' | "
+                              "xargs sudo kill -2".format(self.task_id))
             time.sleep(3)
-
-        for _ in range(3):
-            if execute_recursive("ps -ef | grep 'task-id {}' | grep -v \"grep\"".format(self.task_id))[0] != 0:
-                print("successfully stop tracer with task id: {}".format(self.task_id))
-                break
-            execute_recursive("ps -ef | grep 'task-id {}' | grep -v \"grep\" | awk '{{print $2}}' | "
-                              "sudo xargs kill -9".format(self.task_id))
-            time.sleep(3)
-        else:
-            print("failed to stop tracer with task id: {}".format(self.task_id))
 
     def collect_info(self):
         if not os.path.isfile(self.execsnoop_log):
@@ -160,16 +150,13 @@ class BccTracer(object):
                 os.unlink(tf)
             os.mknod(tf)
 
-        trace_data_tar_file = tarfile.open(self.trace_data_tar_file, "w:gz")
-        trace_data_tar_file.add(os.path.join(self.task_workspace, TRACE_DATA_DIR_NAME), arcname=TRACE_DATA_DIR_NAME)
-        trace_data_tar_file.close()
+        with tarfile.open(self.trace_data_tar_file, "w:gz") as trace_data_tar_file:
+            trace_data_tar_file.add(os.path.join(self.task_workspace, TRACE_DATA_DIR_NAME), arcname=TRACE_DATA_DIR_NAME)
 
-        def_file_tar_file = tarfile.open(self.def_file_tar_file, "w:gz")
-        def_file_tar_file.add(os.path.join(self.task_workspace, DEFINITION_FILE_DIR_NAME),
-                              arcname=DEFINITION_FILE_DIR_NAME)
-        def_file_tar_file.close()
+        with tarfile.open(self.def_file_tar_file, "w:gz") as def_file_tar_file:
+            def_file_tar_file.add(os.path.join(self.task_workspace, DEFINITION_FILE_DIR_NAME),
+                                  arcname=DEFINITION_FILE_DIR_NAME)
 
-        tar_file = tarfile.open(self.tar_file, "w:gz")
-        tar_file.add(self.trace_data_tar_file, arcname=os.path.basename(self.trace_data_tar_file))
-        tar_file.add(self.def_file_tar_file, arcname=os.path.basename(self.def_file_tar_file))
-        tar_file.close()
+        with tarfile.open(self.tar_file, "w:gz") as tar_file:
+            tar_file.add(self.trace_data_tar_file, arcname=os.path.basename(self.trace_data_tar_file))
+            tar_file.add(self.def_file_tar_file, arcname=os.path.basename(self.def_file_tar_file))
