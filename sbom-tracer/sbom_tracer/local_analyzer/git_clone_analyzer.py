@@ -5,6 +5,7 @@ import subprocess
 from argparse import ArgumentParser
 
 from sbom_tracer.local_analyzer.analyzer_base import AnalyzerBase
+from sbom_tracer.util.log import logger
 from sbom_tracer.util.shell_util import execute
 
 # A 'git clone' command parser
@@ -66,8 +67,8 @@ class GitCloneAnalyzer(AnalyzerBase):
             url = execute("%s config --get remote.origin.url" % full_cmd.strip().split()[0],
                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)[1].strip()
             fd.write(json.dumps(dict(commit_id=commit_id, version_string=version_string, url=url, tag=self.tag)) + "\n")
-        except:
-            pass
+        except Exception as e:
+            logger.warning("When handle [%s], an unknown exception occurs: %s", full_cmd, e, exc_info=True)
 
     @classmethod
     def _infer_git_clone_dir(cls, full_cmd):
