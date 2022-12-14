@@ -3,6 +3,7 @@ import os
 import subprocess
 
 from sbom_tracer.local_analyzer.analyzer_base import AnalyzerBase
+from sbom_tracer.util.log import logger
 from sbom_tracer.util.shell_util import execute
 
 
@@ -25,5 +26,5 @@ class GitSubmoduleAnalyzer(AnalyzerBase):
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE)[1].strip()
                 fd.write(json.dumps(dict(commit_id=commit_id, version_string=version_string, url=url, tag=self.tag))
                          + "\n")
-        except:
-            pass
+        except Exception as e:
+            logger.warning("When handle [%s], an unknown exception occurs: %s", full_cmd, e, exc_info=True)

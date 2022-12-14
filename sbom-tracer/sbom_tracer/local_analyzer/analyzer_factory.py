@@ -6,6 +6,7 @@ import re
 
 from sbom_tracer.local_analyzer.analyzer_base import AnalyzerBase
 from sbom_tracer.util.const import PROJECT_NAME
+from sbom_tracer.util.log import logger
 
 
 class AnalyzerFactory(object):
@@ -24,4 +25,5 @@ class AnalyzerFactory(object):
         for name, clz in inspect.getmembers(module, inspect.isclass):
             if issubclass(clz, AnalyzerBase) and clz != AnalyzerBase:
                 return clz
-        raise Exception("invalid local analyzer: [{}]".format(analyzer))
+        logger.error("Invalid local analyzer: [%s]", analyzer)
+        raise Exception("Invalid local analyzer: [{}]".format(analyzer))

@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='sbom_tracer',
-    version='1.0.0',
+    version='1.0.2',
     author='sbom',
     packages=find_packages(),
     package_data={'': ['conf/default_command_config.yml']},
