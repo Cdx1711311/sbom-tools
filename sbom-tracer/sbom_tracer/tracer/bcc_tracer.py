@@ -43,8 +43,10 @@ class BccTracer(object):
             os.makedirs(task_workspace)
         except OSError:
             pass
-        os.mkdir(os.path.join(task_workspace, TRACE_DATA_DIR_NAME))
-        os.mkdir(os.path.join(task_workspace, DEFINITION_FILE_DIR_NAME))
+        for dir_name in (TRACE_DATA_DIR_NAME, DEFINITION_FILE_DIR_NAME):
+            if os.path.exists(os.path.join(task_workspace, dir_name)):
+                shutil.rmtree(os.path.join(task_workspace, dir_name))
+            os.mkdir(os.path.join(task_workspace, dir_name))
         return task_workspace
 
     def trace(self):

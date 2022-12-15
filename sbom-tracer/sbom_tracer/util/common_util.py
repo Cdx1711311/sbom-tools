@@ -77,6 +77,9 @@ def _copy_definition_file(f, src_dir, dst_dir, definition_file_patterns):
     if re.match("|".join(definition_file_patterns), f):
         target_dir = os.path.join(dst_dir, src_dir.lstrip("/"))
         if not os.path.exists(target_dir):
-            os.makedirs(target_dir)
+            try:
+                os.makedirs(target_dir)
+            except OSError:
+                pass
         logger.info("Copy [%s] from [%s] to [%s]", f, src_dir, target_dir)
         shutil.copy(os.path.join(src_dir, f), target_dir)
