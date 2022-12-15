@@ -115,15 +115,25 @@ class BccTracer(object):
 
     def stop_trace(self):
         logger.info("Start to stop tracer subprocesses")
-        count = 1
-        while True:
+        for i in range(1, 4):
             if execute_recursive("ps -ewwf | grep 'task-id {}' | grep -v \"grep\"".format(self.task_id))[0] != 0:
-                break
-            logger.info("Try to stop subprocesses for the [%s] time", count)
+                logger.info("End to stop tracer subprocesses")
+                return
+            logger.info("Try to stop subprocesses with 'kill -2' for the [%s] time", i)
             execute_recursive("ps -ewwf | grep 'task-id {}' | grep -v \"grep\" | awk '{{print $2}}' | "
                               "xargs sudo kill -2".format(self.task_id))
             time.sleep(3)
-        logger.info("End to stop tracer subprocesses")
+
+        count = 1
+        while True:
+            if execute_recursive("ps -ewwf | grep 'task-id {}' | grep -v \"grep\"".format(self.task_id))[0] != 0:
+                logger.info("End to stop tracer subprocesses")
+                return
+            logger.info("Try to stop subprocesses with 'kill -9' for the [%s] time", count)
+            execute_recursive("ps -ewwf | grep 'task-id {}' | grep -v \"grep\" | awk '{{print $2}}' | "
+                              "xargs sudo kill -9".format(self.task_id))
+            time.sleep(3)
+            count += 1
 
     def collect_info(self):
         logger.info("Start to collect local info")

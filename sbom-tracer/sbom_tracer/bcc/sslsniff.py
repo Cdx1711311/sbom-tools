@@ -7,6 +7,7 @@ from __future__ import print_function
 
 import argparse
 import json
+import sys
 
 from sbom_tracer.util.compat import decode
 
@@ -127,6 +128,7 @@ def print_event(cpu, data, size):
 
     ppid = event.ppid if event.ppid > 0 else get_ppid(event.pid)
     print(json.dumps(dict(cmd=decode(event.comm), pid=event.pid, ppid=ppid, data=decode(buf))))
+    sys.stdout.flush()
 
 
 b["perf_SSL_write"].open_perf_buffer(print_event, page_cnt=256)
