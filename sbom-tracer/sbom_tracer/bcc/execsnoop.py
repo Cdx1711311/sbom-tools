@@ -7,6 +7,7 @@ from __future__ import print_function
 
 import argparse
 import json
+import sys
 import time
 from collections import defaultdict
 
@@ -218,6 +219,7 @@ def print_event(cpu, data, size):
             argv_text = ' '.join(argv[event.pid]).strip()
             print(json.dumps(dict(pid=event.pid, ppid=ppid, cmd=decode(event.comm), full_cmd=argv_text,
                                   cwd=cwd.get(event.pid), ancestor_pids=list(event.ancestor_pids))))
+            sys.stdout.flush()
         try:
             del (argv[event.pid])
             del (cwd[event.pid])

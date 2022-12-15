@@ -9,6 +9,7 @@ from __future__ import print_function
 
 import argparse
 import json
+import sys
 
 import hyperframe.frame
 from hpack import Decoder
@@ -161,6 +162,7 @@ def print_event(cpu, data, size):
             ppid = event.ppid if event.ppid > 0 else get_ppid(event.pid)
             print(json.dumps(dict(cmd=decode(event.comm), pid=event.pid,
                                   ppid=ppid, data=Decoder().decode(bytes(buf[9:9 + frame_len])))))
+            sys.stdout.flush()
 
         buf = buf[9 + frame_len:]
 
