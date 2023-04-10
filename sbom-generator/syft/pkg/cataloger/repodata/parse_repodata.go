@@ -49,7 +49,7 @@ func parsePackagesInfo(isoFileSystem IsoFileSystem, repodataFileList RepodataFil
 	ifnull( description, "") description,
 	rpm_sourcerpm sourceRpm,
 	rpm_vendor vendor,
-	rpm_packager packager,
+	ifnull( rpm_packager, "") packager,
 	rpm_license license,
 	size_installed size,
 	ifnull( url, "") homepage,
